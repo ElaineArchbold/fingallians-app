@@ -19,7 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── ⚙️  CONFIG — replace these with your own Supabase project values ──────────
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOi...";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
 const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,9 +213,15 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .inp{
   width:100%;padding:12px 14px;border:2px solid #e8d8d8;border-radius:var(--r-sm);
   font-family:'Lato',sans-serif;font-size:15px;outline:none;transition:border 0.2s;
-  margin-bottom:13px;background:#fdfafa
+  margin-bottom:13px;background:#fdfafa;color:var(--dark);
 }
 .inp:focus{border-color:var(--g);background:#fff}
+.inp:-webkit-autofill,
+.inp:-webkit-autofill:hover,
+.inp:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--dark);
+  -webkit-box-shadow:0 0 0px 1000px #fdfafa inset;
+  transition:background-color 5000s ease-in-out 0s;
 .btn{
   width:100%;padding:14px;border:none;border-radius:var(--r-sm);cursor:pointer;
   font-family:'Barlow Condensed',sans-serif;font-size:22px;letter-spacing:0.06em;
