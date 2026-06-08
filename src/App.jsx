@@ -18,9 +18,9 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── ⚙️  CONFIG — replace these with your own Supabase project values ──────────
-const SUPABASE_URL = "https://keokuecrjhksgtbsxudj.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOi..."; 
-const ADMIN_EMAIL = "e.t.archbold@gmail.com";
+const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOi...";
+const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
