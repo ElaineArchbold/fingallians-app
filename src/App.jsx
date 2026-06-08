@@ -1,4 +1,3 @@
-
 // ─────────────────────────────────────────────────────────────────────────────
 // FINGALLIANS GAA — 2014 BOYS SUMMER FITNESS CHALLENGE
 // Full app: Supabase auth · Parent portal · Admin panel · Video demos · Tracking
@@ -16,12 +15,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── ⚙️  CONFIG — replace these with your own Supabase project values ──────────
-const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
-const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
+const SUPABASE_URL = "https://keokuecrjhksgtbsxudj.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOi..."; 
+const ADMIN_EMAIL = "e.t.archbold@gmail.com";
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -36,7 +36,7 @@ const WEEKS = [
     week:1, phase:"Foundation", dates:"Jun 29–Jul 5",
     runs:[{label:"Run 1",distance:"2k"},{label:"Run 2",distance:"2k"},{label:"Run 3",distance:"2.5k"}],
     skills:[
-      {id:"h1a",label:"🏑 Ball Wall – Striking",desc:"20 mins: alternate striking off both sides, aim for below shoulder height. Count consecutive clean strikes.",youtube_id:"Nhgytua4JeQ"},
+      {id:"h1a",label:"🏑 Ball Wall – Striking",desc:"20 mins: alternate striking off both sides, aim for below shoulder height. Count consecutive clean strikes.",youtube_id:"XOD1-Ms_FMc"},
       {id:"f1a",label:"⚽ Ball Wall – Kick-Pass",desc:"20 mins: kick-pass off the wall, catch on the return. Focus on clean first touch. Try both feet.",youtube_id:"4u6KVhCmE4k"},
     ],
     squad:{label:"Squad Session – Striking Lines & Kick-Pass",desc:"Get 3–4 lads together. Split the session: first 10 mins hurling – take turns striking, count how many stay below shoulder height. Then 10 mins football – kick-pass pairs, count clean takes. Record both scores!",youtube_id:"DemoYTID03"},
@@ -596,26 +596,68 @@ export default function App() {
 // AUTH SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 function AuthScreen({ showToast }) {
-  const [mode, setMode]     = useState("login"); // login | signup
-  const [email, setEmail]   = useState("");
-  const [pw, setPw]         = useState("");
-  const [pw2, setPw2]       = useState("");
-  const [err, setErr]       = useState("");
-  const [busy, setBusy]     = useState(false);
+  const [mode, setMode]         = useState("login"); // login | signup | verify
+  const [email, setEmail]       = useState("");
+  const [pw, setPw]             = useState("");
+  const [pw2, setPw2]           = useState("");
+  const [err, setErr]           = useState("");
+  const [busy, setBusy]         = useState(false);
+  const [signedUpEmail, setSignedUpEmail] = useState("");
 
   async function submit() {
     setErr(""); setBusy(true);
     if (mode === "signup") {
       if (pw !== pw2) { setErr("Passwords don't match"); setBusy(false); return; }
       if (pw.length < 6) { setErr("Password must be at least 6 characters"); setBusy(false); return; }
-      const { error } = await sb.auth.signUp({ email, password: pw });
+      const { error } = await sb.auth.signUp({ email, password: pw,
+        options: { emailRedirectTo: "https://fingallians-app.vercel.app" }
+      });
       if (error) { setErr(error.message); setBusy(false); return; }
-      showToast("📧 Check your email to confirm your account!");
+      setSignedUpEmail(email);
+      setMode("verify");
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-      if (error) { setErr("Incorrect email or password"); setBusy(false); return; }
+      if (error) { setErr("Incorrect email or password. If you just registered, make sure you've clicked the confirmation link in your email first."); setBusy(false); return; }
     }
     setBusy(false);
+  }
+
+  // ── Verify screen — shown immediately after signup ──
+  if (mode === "verify") {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-hero">
+          <div className="crest-large"><img src={LOGO} alt="Fingallians GAA" /></div>
+          <h2>SUMMER FITNESS CHALLENGE</h2>
+          <p>June–August 2026 · 8 Weeks<br/>Runs · Skills · Squad Sessions</p>
+        </div>
+        <div className="card">
+          <div className="card-bd" style={{textAlign:"center",padding:"28px 20px"}}>
+            <div style={{fontSize:52,marginBottom:12}}>📧</div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,letterSpacing:"0.02em",marginBottom:10}}>
+              CHECK YOUR EMAIL
+            </div>
+            <p style={{fontSize:14,color:"var(--mid)",lineHeight:1.6,marginBottom:20}}>
+              We've sent a confirmation link to:<br/>
+              <strong style={{color:"var(--dark)"}}>{signedUpEmail}</strong>
+            </p>
+            <div style={{background:"var(--g3)",borderRadius:10,padding:"14px 16px",marginBottom:20,textAlign:"left"}}>
+              <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.7}}>
+                1️⃣ &nbsp;Open the email from Fingallians GAA<br/>
+                2️⃣ &nbsp;Click the <strong>Confirm your email</strong> link<br/>
+                3️⃣ &nbsp;Come back here and sign in
+              </div>
+            </div>
+            <p style={{fontSize:12,color:"var(--muted)",marginBottom:20}}>
+              Can't find it? Check your spam/junk folder.
+            </p>
+            <button className="btn btn-green" onClick={()=>{setMode("login");setEmail(signedUpEmail);setPw("");setPw2("");}}>
+              GO TO SIGN IN →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -634,12 +676,15 @@ function AuthScreen({ showToast }) {
         <div className="card-bd">
           {err && <div className="err">{err}</div>}
           <label className="lbl">Email</label>
-          <input className="inp" type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} />
+          <input className="inp" type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&submit()} />
           <label className="lbl">Password</label>
-          <input className="inp" type="password" placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)} />
+          <input className="inp" type="password" placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&submit()} />
           {mode === "signup" && <>
             <label className="lbl">Confirm Password</label>
-            <input className="inp" type="password" placeholder="••••••••" value={pw2} onChange={e=>setPw2(e.target.value)} />
+            <input className="inp" type="password" placeholder="••••••••" value={pw2} onChange={e=>setPw2(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&submit()} />
           </>}
           <button className="btn btn-green" onClick={submit} disabled={busy}>
             {busy ? "…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
