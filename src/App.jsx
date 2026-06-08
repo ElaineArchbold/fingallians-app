@@ -210,18 +210,14 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .card-hd p{font-size:12px;color:var(--mid);margin-top:3px}
 .card-bd{padding:16px 18px}
 .lbl{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:5px}
-.inp{
-  width:100%;padding:12px 14px;border:2px solid #e8d8d8;border-radius:var(--r-sm);
-  font-family:'Lato',sans-serif;font-size:15px;outline:none;transition:border 0.2s;
-  margin-bottom:13px;background:#fdfafa;color:var(--dark);
-}
-.inp:focus{border-color:var(--g);background:#fff}
 .inp:-webkit-autofill,
 .inp:-webkit-autofill:hover,
 .inp:-webkit-autofill:focus{
   -webkit-text-fill-color:var(--dark);
   -webkit-box-shadow:0 0 0px 1000px #fdfafa inset;
   transition:background-color 5000s ease-in-out 0s;
+}
+
 .btn{
   width:100%;padding:14px;border:none;border-radius:var(--r-sm);cursor:pointer;
   font-family:'Barlow Condensed',sans-serif;font-size:22px;letter-spacing:0.06em;
