@@ -21,8 +21,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
 const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
- const [showPw, setShowPw]   = useState(false);
-  const [showPw2, setShowPw2] = useState(false);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -600,13 +598,15 @@ export default function App() {
 // AUTH SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 function AuthScreen({ showToast }) {
-  const [mode, setMode]         = useState("login"); // login | signup | verify
+  const [mode, setMode]         = useState("login");
   const [email, setEmail]       = useState("");
   const [pw, setPw]             = useState("");
   const [pw2, setPw2]           = useState("");
   const [err, setErr]           = useState("");
   const [busy, setBusy]         = useState(false);
   const [signedUpEmail, setSignedUpEmail] = useState("");
+  const [showPw, setShowPw]     = useState(false);
+  const [showPw2, setShowPw2]   = useState(false);
 
   async function submit() {
     setErr(""); setBusy(true);
