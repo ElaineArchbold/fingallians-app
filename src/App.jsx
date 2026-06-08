@@ -21,6 +21,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
 const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
+ const [showPw, setShowPw]   = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -680,13 +682,25 @@ function AuthScreen({ showToast }) {
           <label className="lbl">Email</label>
           <input className="inp" type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)}
             onKeyDown={e=>e.key==="Enter"&&submit()} />
-          <label className="lbl">Password</label>
-          <input className="inp" type="password" placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&submit()} />
+         <label className="lbl">Password</label>
+          <div style={{position:"relative",marginBottom:0}}>
+            <input className="inp" type={showPw?"text":"password"} placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:13,paddingRight:44}} />
+            <button type="button" onClick={()=>setShowPw(v=>!v)}
+              style={{position:"absolute",right:12,top:12,background:"none",border:"none",cursor:"pointer",fontSize:18,color:"var(--muted)",padding:0}}>
+              {showPw?"🙈":"👁️"}
+            </button>
+          </div>
           {mode === "signup" && <>
             <label className="lbl">Confirm Password</label>
-            <input className="inp" type="password" placeholder="••••••••" value={pw2} onChange={e=>setPw2(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&submit()} />
+            <div style={{position:"relative"}}>
+              <input className="inp" type={showPw2?"text":"password"} placeholder="••••••••" value={pw2} onChange={e=>setPw2(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:13,paddingRight:44}} />
+              <button type="button" onClick={()=>setShowPw2(v=>!v)}
+                style={{position:"absolute",right:12,top:12,background:"none",border:"none",cursor:"pointer",fontSize:18,color:"var(--muted)",padding:0}}>
+                {showPw2?"🙈":"👁️"}
+              </button>
+            </div>
           </>}
           <button className="btn btn-green" onClick={submit} disabled={busy}>
             {busy ? "…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
