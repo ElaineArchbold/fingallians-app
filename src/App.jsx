@@ -265,6 +265,15 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .divider::before,.divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:#e8d8d8}
 .divider::before{left:0}.divider::after{right:0}
 select.inp{appearance:none;cursor:pointer}
+.tc-box{background:#f9f0f0;border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid #f0dede}
+.tc-box h4{font-family:'Barlow Condensed',sans-serif;font-size:16px;color:var(--g);letter-spacing:0.02em;margin-bottom:8px}
+.tc-section{margin-bottom:10px}
+.tc-section:last-child{margin-bottom:0}
+.tc-section strong{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:var(--mid);margin-bottom:3px}
+.tc-section p{font-size:12px;color:var(--mid);line-height:1.6}
+.tc-check-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer}
+.tc-check-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--g);flex-shrink:0;margin-top:1px;cursor:pointer}
+.tc-check-row span{font-size:13px;color:var(--mid);line-height:1.5}
 `;
 
 export default function App() {
@@ -411,12 +420,15 @@ function AuthScreen({ showToast }) {
   const [signedUpEmail, setSignedUpEmail] = useState("");
   const [showPw, setShowPw]           = useState(false);
   const [showPw2, setShowPw2]         = useState(false);
+  const [tcAgreed, setTcAgreed]       = useState(false);
+  const [showTc, setShowTc]           = useState(false);
 
   async function submit() {
     setErr(""); setBusy(true);
     if (mode === "signup") {
       if (pw !== pw2) { setErr("Passwords don't match"); setBusy(false); return; }
       if (pw.length < 6) { setErr("Password must be at least 6 characters"); setBusy(false); return; }
+      if (!tcAgreed) { setErr("Please agree to the Terms & Conditions to continue"); setBusy(false); return; }
       const { error } = await sb.auth.signUp({ email, password: pw,
         options: { emailRedirectTo: "https://fingallians-app.vercel.app" }
       });
@@ -495,6 +507,29 @@ function AuthScreen({ showToast }) {
                 {showPw2?"🙈":"👁️"}
               </button>
             </div>
+            <div className="tc-box">
+              <h4 onClick={()=>setShowTc(v=>!v)} style={{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                Terms & Conditions <span style={{fontSize:14,fontFamily:"'Lato',sans-serif"}}>{showTc?"▲":"▼ Read"}</span>
+              </h4>
+              {showTc && <>
+                <div className="tc-section">
+                  <strong>Exercise Guidelines</strong>
+                  <p>The activities in this challenge are guidelines only. Coaches encourage all players to participate at a level that suits their individual fitness and ability. Boys should never push through pain or discomfort. Parents and players are responsible for deciding what level of activity is appropriate. Fingallians GAA accepts no liability for any injury sustained while participating in this challenge.</p>
+                </div>
+                <div className="tc-section">
+                  <strong>Data & Privacy</strong>
+                  <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing <strong>fingallians2014boys@gmail.com</strong>.</p>
+                </div>
+                <div className="tc-section">
+                  <strong>Participation</strong>
+                  <p>This challenge is run voluntarily by Fingallians 2014 Boys coaches for the benefit of the players. Points and prizes are awarded in good faith. The club reserves the right to amend the challenge at any time.</p>
+                </div>
+              </>}
+            </div>
+            <label className="tc-check-row">
+              <input type="checkbox" checked={tcAgreed} onChange={e=>setTcAgreed(e.target.checked)} />
+              <span>I have read and agree to the <button type="button" className="link-btn" onClick={()=>setShowTc(true)} style={{fontSize:13}}>Terms & Conditions</button> and confirm I am the parent or guardian of the player I am registering.</span>
+            </label>
           </>}
           <button className="btn btn-green" onClick={submit} disabled={busy}>
             {busy ? "…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
@@ -605,6 +640,9 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
       </div>
       <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} />
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={onNav}>VIEW FULL 8-WEEK PLAN →</button>
+      <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
+        <button className="link-btn" style={{color:"var(--muted)",fontSize:13}} onClick={()=>sb.auth.signOut()}>Sign out</button>
+      </div>
     </div>
   );
 }
