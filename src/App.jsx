@@ -640,6 +640,19 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
       </div>
       <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} />
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={onNav}>VIEW FULL 8-WEEK PLAN →</button>
+
+      {/* Share your skills */}
+      <div style={{background:"linear-gradient(135deg,#7d1018 0%,var(--g) 100%)",borderRadius:"var(--radius)",padding:"16px 18px",marginTop:12,color:"white",textAlign:"center"}}>
+        <div style={{fontSize:24,marginBottom:6}}>📱🏑⚽</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,letterSpacing:"0.02em",marginBottom:6}}>SHARE YOUR SKILLS!</div>
+        <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:10}}>
+          Filmed yourself practising? Send your videos to the coaches — we'd love to see the lads putting in the work!
+        </div>
+        <a href="mailto:fingallians2014boys@gmail.com" style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",fontWeight:900,padding:"8px 16px",borderRadius:20,textDecoration:"none"}}>
+          📧 fingallians2014boys@gmail.com
+        </a>
+      </div>
+
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
         <button className="link-btn" style={{color:"var(--muted)",fontSize:13}} onClick={()=>sb.auth.signOut()}>Sign out</button>
       </div>
@@ -779,6 +792,23 @@ function PlanTab({ checks, onToggle, player }) {
           </div>
         );
       })}
+
+      {/* T&Cs at bottom of Plan tab */}
+      <div className="tc-box" style={{marginTop:8}}>
+        <h4 style={{marginBottom:12}}>Terms & Conditions</h4>
+        <div className="tc-section">
+          <strong>Exercise Guidelines</strong>
+          <p>The activities in this challenge are guidelines only. Coaches encourage all players to participate at a level that suits their individual fitness and ability. Boys should never push through pain or discomfort. Parents and players are responsible for deciding what level of activity is appropriate. Fingallians GAA accepts no liability for any injury sustained while participating in this challenge.</p>
+        </div>
+        <div className="tc-section">
+          <strong>Data & Privacy</strong>
+          <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing <strong>fingallians2014boys@gmail.com</strong>.</p>
+        </div>
+        <div className="tc-section">
+          <strong>Participation</strong>
+          <p>This challenge is run voluntarily by Fingallians 2014 Boys coaches for the benefit of the players. Points and prizes are awarded in good faith. The club reserves the right to amend the challenge at any time.</p>
+        </div>
+      </div>
     </div>
   );
 }
