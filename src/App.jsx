@@ -360,6 +360,7 @@ export default function App() {
   const TABS = [
     { id:"home", label:"Home" },
     { id:"plan", label:"Plan" },
+    { id:"scores", label:"Scores" },
     ...(isAdmin ? [{ id:"admin", label:"⚙️ Admin" }] : []),
   ];
 
@@ -399,6 +400,10 @@ export default function App() {
 
         {session && (player || isAdmin) && tab === "plan" && (
           <PlanTab checks={checks} onToggle={toggleTask} player={player} />
+        )}
+
+        {session && (player || isAdmin) && tab === "scores" && (
+          <ScoresTab player={player} />
         )}
 
         {session && isAdmin && tab === "admin" && (
@@ -813,20 +818,110 @@ function PlanTab({ checks, onToggle, player }) {
   );
 }
 
-function AdminTab({ allPlayers, onRefresh, showToast }) {
-  const [newName, setNewName] = useState("");
-  const [adding, setAdding]   = useState(false);
-  const [playerStats, setPlayerStats] = useState({});
+// ══════════════════════════════════════════════════════════════════════════════
+// SCORES TAB — leaderboard visible to all logged-in users
+// ══════════════════════════════════════════════════════════════════════════════
+function ScoresTab({ player }) {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const { data } = await sb.from("task_completions").select("player_id, task_key");
+      const { data: players } = await sb.from("players").select("id,name");
+      const { data: comps }   = await sb.from("task_completions").select("player_id,task_key");
+      if (!players) return;
+      const statsMap = {};
+      comps?.forEach(r => {
+        if (!statsMap[r.player_id]) statsMap[r.player_id] = {};
+        statsMap[r.player_id][r.task_key] = true;
+      });
+      const rows = players.map(p => ({
+        id: p.id,
+        name: p.name,
+        pts: totalPts(statsMap[p.id] || {}),
+      })).sort((a,b) => b.pts - a.pts);
+      setLeaderboard(rows);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const rankEmoji = (i) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}`;
+  const maxPossible = WEEKS.reduce((a,w) => a + weekMaxPts(w), 0);
+
+  return (
+    <div style={{padding:"14px 16px"}}>
+      {/* Hero */}
+      <div style={{background:"linear-gradient(135deg,var(--g) 0%,#4a0a0e 100%)",borderRadius:"var(--radius)",padding:"22px 20px",marginBottom:14,color:"white",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",right:-10,bottom:-14,fontSize:100,opacity:0.07,pointerEvents:"none"}}>🏆</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,letterSpacing:"0.02em",color:"var(--gold)"}}>LEADERBOARD</div>
+        <div style={{fontSize:12,opacity:0.75,marginTop:4}}>Fingallians 2014 Boys · Summer Challenge 2026</div>
+        <div style={{fontSize:11,opacity:0.6,marginTop:4}}>Updates live as sessions are logged</div>
+      </div>
+
+      {loading ? (
+        <div className="loader"><div className="spinner"/>Loading scores…</div>
+      ) : leaderboard.length === 0 ? (
+        <div className="empty"><div className="icon">🏑</div><p>No scores yet — get logging!</p></div>
+      ) : leaderboard.map((p, i) => {
+        const isYou = player?.id === p.id;
+        const pct   = Math.round((p.pts / maxPossible) * 100);
+        return (
+          <div key={p.id} style={{
+            display:"flex",alignItems:"center",gap:12,
+            background: isYou ? "var(--g3)" : "white",
+            border: isYou ? "2px solid var(--g)" : "2px solid transparent",
+            borderRadius:14,padding:"12px 14px",marginBottom:8,
+            boxShadow:"0 2px 10px rgba(163,22,33,0.08)"
+          }}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,width:32,textAlign:"center",flexShrink:0}}>
+              {rankEmoji(i)}
+            </div>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,flexShrink:0}}>
+              {p.name[0]}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:15}}>{p.name}{isYou?" 👈":""}</div>
+              <div style={{height:4,background:"#f0dede",borderRadius:2,marginTop:5,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:i===0?"var(--gold)":"var(--g)",borderRadius:2,transition:"width 0.4s"}}/>
+              </div>
+            </div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:"var(--g)",flexShrink:0}}>
+              {p.pts} <span style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"var(--muted)",fontWeight:600}}>pts</span>
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:16,lineHeight:1.7}}>
+        🏆 Most Improved Player prize awarded at end of summer<br/>
+        based on skills assessment before &amp; after the challenge
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN TAB
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminTab({ allPlayers, onRefresh, showToast }) {
+  const [newName, setNewName]         = useState("");
+  const [adding, setAdding]           = useState(false);
+  const [playerStats, setPlayerStats] = useState({});
+  const [claimedIds, setClaimedIds]   = useState(new Set());
+
+  useEffect(() => {
+    async function load() {
+      const { data: comps } = await sb.from("task_completions").select("player_id,task_key");
       const stats = {};
-      data?.forEach(r => {
+      comps?.forEach(r => {
         if (!stats[r.player_id]) stats[r.player_id] = {};
         stats[r.player_id][r.task_key] = true;
       });
       setPlayerStats(stats);
+
+      const { data: links } = await sb.from("parent_players").select("player_id");
+      setClaimedIds(new Set(links?.map(l => l.player_id) || []));
     }
     load();
   }, [allPlayers]);
@@ -848,6 +943,8 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
   }
 
   const maxPossible = WEEKS.reduce((a,w) => a + weekMaxPts(w), 0);
+  const claimed   = allPlayers.filter(p => claimedIds.has(p.id));
+  const unclaimed = allPlayers.filter(p => !claimedIds.has(p.id));
 
   return (
     <div className="admin-wrap">
@@ -858,6 +955,8 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
           <p>Manage squad · View completions</p>
         </div>
       </div>
+
+      {/* Add player */}
       <div className="section-title">ADD PLAYER</div>
       <div className="add-form">
         <label className="lbl">Player Name</label>
@@ -866,28 +965,68 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
           {adding?"…":"+ ADD TO SQUAD"}
         </button>
       </div>
-      <div className="section-title">SQUAD ({allPlayers.length} players)</div>
-      {allPlayers.length === 0 ? (
-        <div className="empty"><div className="icon">🏑</div><p>No players yet</p></div>
-      ) : allPlayers.map(p => {
-        const c   = playerStats[p.id] || {};
-        const pts = totalPts(c);
-        const pct = Math.round((pts / maxPossible) * 100);
-        return (
-          <div key={p.id} className="player-row">
-            <div className="player-av">{p.name[0]}</div>
-            <div className="player-info">
-              <div className="player-name">{p.name}</div>
-              <div className="prog-mini"><div className="prog-mini-fill" style={{width:`${pct}%`}}/></div>
-            </div>
-            <div className="player-pts">{pts} <small>pts</small></div>
-            <button className="btn btn-sm btn-danger" onClick={()=>removePlayer(p.id,p.name)}>✕</button>
+
+      {/* Registration status */}
+      <div className="section-title">REGISTRATION STATUS</div>
+      <div style={{display:"flex",gap:10,marginBottom:14}}>
+        <div style={{flex:1,background:"#e8f5e9",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#2e7d32"}}>{claimed.length}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#2e7d32",textTransform:"uppercase",letterSpacing:"0.06em"}}>Registered ✅</div>
+        </div>
+        <div style={{flex:1,background:"#fff3e0",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#e65100"}}>{unclaimed.length}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#e65100",textTransform:"uppercase",letterSpacing:"0.06em"}}>Not Yet ⏳</div>
+        </div>
+      </div>
+
+      {/* Not yet registered */}
+      {unclaimed.length > 0 && (
+        <>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#e65100",marginBottom:8}}>
+            ⏳ NOT YET REGISTERED ({unclaimed.length})
           </div>
-        );
-      })}
+          {unclaimed.map(p => (
+            <div key={p.id} className="player-row" style={{borderLeft:"3px solid #e65100"}}>
+              <div className="player-av" style={{background:"#e65100"}}>{p.name[0]}</div>
+              <div className="player-info">
+                <div className="player-name">{p.name}</div>
+                <div style={{fontSize:11,color:"var(--muted)"}}>Parent hasn't signed up yet</div>
+              </div>
+              <button className="btn btn-sm btn-danger" onClick={()=>removePlayer(p.id,p.name)}>✕</button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Registered players with progress */}
+      {claimed.length > 0 && (
+        <>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#2e7d32",marginBottom:8,marginTop:unclaimed.length>0?14:0}}>
+            ✅ REGISTERED & ACTIVE ({claimed.length})
+          </div>
+          {claimed.map(p => {
+            const c   = playerStats[p.id] || {};
+            const pts = totalPts(c);
+            const pct = Math.round((pts / maxPossible) * 100);
+            return (
+              <div key={p.id} className="player-row" style={{borderLeft:"3px solid #2e7d32"}}>
+                <div className="player-av">{p.name[0]}</div>
+                <div className="player-info">
+                  <div className="player-name">{p.name}</div>
+                  <div className="prog-mini"><div className="prog-mini-fill" style={{width:`${pct}%`}}/></div>
+                </div>
+                <div className="player-pts">{pts} <small>pts</small></div>
+                <button className="btn btn-sm btn-danger" onClick={()=>removePlayer(p.id,p.name)}>✕</button>
+              </div>
+            );
+          })}
+        </>
+      )}
+
       <div style={{marginTop:20,textAlign:"center"}}>
         <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
       </div>
+
       <div className="card" style={{marginTop:20}}>
         <div className="card-hd"><h3>Adding YouTube Videos</h3></div>
         <div className="card-bd" style={{fontSize:13,color:"var(--mid)",lineHeight:1.7}}>
