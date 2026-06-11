@@ -951,11 +951,12 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [period,   setPeriod]   = useState("pre");
   const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
   const [view,     setView]     = useState("entry");
-  const [entries,  setEntries]  = useState({});  // { [pid]: { finish, lap, notes } }
+  const [entries,  setEntries]  = useState({});  // { [pid]: { lap, notes } }
   const [cnotes,   setCnotes]   = useState({});  // { [pid]: { football: {myNote,saved[]}, hurling: {myNote,saved[]} } }
   const [open,     setOpen]     = useState({});  // { [pid+sport]: bool } accordion state
   const [saving,   setSaving]   = useState({});
   const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState("");
 
   // Load fitness + coach notes together
   useEffect(() => {
@@ -968,12 +969,11 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     ]).then(([{ data: ft }, { data: cn }]) => {
       // Seed entries
       const eMap = {};
-      allPlayers.forEach(p => { eMap[p.id] = { finish: "", lap: "", notes: "" }; });
+      allPlayers.forEach(p => { eMap[p.id] = { lap: "", notes: "" }; });
       ft?.forEach(r => {
         eMap[r.player_id] = {
-          finish: r.finish_time ? fmtTime(r.finish_time) : "",
-          lap:    r.lap_time    ? fmtTime(r.lap_time)    : "",
-          notes:  r.notes || "",
+          lap:   r.lap_time ? fmtTime(r.lap_time) : "",
+          notes: r.notes || "",
         };
       });
       setEntries(eMap);
@@ -1015,10 +1015,10 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       const e = entries[p.id] || {};
       return {
         player_id: p.id, period, test_date: testDate,
-        finish_time: parseTime(e.finish), lap_time: parseTime(e.lap),
+        lap_time: parseTime(e.lap),
         notes: e.notes?.trim() || null, updated_at: new Date().toISOString(),
       };
-    }).filter(r => r.finish_time || r.lap_time || r.notes);
+    }).filter(r => r.lap_time || r.notes);
     let errs = 0;
     for (const row of rows) {
       const { error } = await sb.from("fitness_tests").upsert(row, { onConflict: "player_id,period" });
@@ -1050,7 +1050,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
   const coachName = email => ({ "e.t.archbold@gmail.com": "Elaine", "seangallagher2506@gmail.com": "Sean", "dodplumbing@gmail.com": "Coach 3" }[email] || email.split("@")[0]);
   const coachColor = email => ({ "e.t.archbold@gmail.com": "#1565c0", "seangallagher2506@gmail.com": "#2e7d32", "dodplumbing@gmail.com": "#6a1b9a" }[email] || "#666");
-  const filledCount = Object.values(entries).filter(e => parseTime(e.finish) || parseTime(e.lap)).length;
+  const filledCount = Object.values(entries).filter(e => parseTime(e.lap)).length;
 
   return (
     <div>
@@ -1073,9 +1073,10 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {["entry","results"].map(v => (
           <button key={v} className="btn btn-sm"
-            style={{background: view===v ? "var(--primary)" : "transparent",
-                    color: view===v ? "#fff" : "var(--mid)",
-                    border:`1px solid ${view===v ? "var(--primary)" : "#ddd"}`}}
+            style={{background: view===v ? "var(--primary)" : "#f5f5f5",
+                    color: view===v ? "#fff" : "#444",
+                    border:`1px solid ${view===v ? "var(--primary)" : "#ddd"}`,
+                    fontWeight:600}}
             onClick={() => setView(v)}>
             {v === "entry" ? "✏️ Enter Times" : "📊 Results Table"}
           </button>
@@ -1087,19 +1088,25 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       {/* ── ENTRY VIEW ── */}
       {!loading && view === "entry" && (
         <>
-          <div style={{fontSize:11,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
-            Type times as <strong>m:ss</strong> (e.g. 4:32). Click ⚽ or 🏑 on any player to add coaching notes.
+          <div style={{fontSize:11,color:"var(--muted)",marginBottom:10,lineHeight:1.6}}>
+            Type lap times as <strong>m:ss</strong> (e.g. 4:32). Click ⚽ or 🏑 to add coaching notes.
           </div>
 
-          {allPlayers.map((p, i) => {
-            const e  = entries[p.id]  || { finish:"", lap:"", notes:"" };
+          {/* Search bar */}
+          <input
+            className="inp"
+            placeholder="🔍  Search player…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{marginBottom:12,fontSize:13,padding:"8px 12px"}}
+          />
+
+          {allPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p, i) => {
+            const e  = entries[p.id]  || { lap:"", notes:"" };
             const cn = cnotes[p.id]   || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
-            const finishValid = e.finish ? parseTime(e.finish) !== null : true;
-            const lapValid    = e.lap    ? parseTime(e.lap)    !== null : true;
+            const lapValid = e.lap ? parseTime(e.lap) !== null : true;
             const ftOpen = open[p.id+"football"];
             const huOpen = open[p.id+"hurling"];
-
-            // Count existing notes for badge
             const ftNotes = cn.football.saved.filter(s => s.note);
             const huNotes = cn.hurling.saved.filter(s => s.note);
 
@@ -1107,29 +1114,19 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
               <div key={p.id} style={{
                 background:"#fff", border:"1px solid #ebebeb", borderRadius:12,
                 marginBottom:8, overflow:"hidden",
-                boxShadow: i===0 ? "none" : "none",
               }}>
-                {/* ── Times row ── */}
-                <div style={{display:"grid", gridTemplateColumns:"1fr 76px 76px",
+                {/* ── Lap time row ── */}
+                <div style={{display:"grid", gridTemplateColumns:"1fr 90px",
                              gap:8, padding:"10px 12px", alignItems:"center"}}>
                   <div style={{fontWeight:700,fontSize:13,color:"var(--dark)"}}>
                     {p.name}
                   </div>
                   <div>
                     <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
-                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Finish</div>
-                    <input className="inp" placeholder="m:ss" value={e.finish}
-                      onChange={ev => setField(p.id,"finish",ev.target.value)}
-                      style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
-                              borderColor: !finishValid ? "#e53935" : undefined,
-                              color: parseTime(e.finish) ? "var(--primary)" : "inherit"}} />
-                  </div>
-                  <div>
-                    <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
-                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap</div>
+                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap Time</div>
                     <input className="inp" placeholder="m:ss" value={e.lap}
                       onChange={ev => setField(p.id,"lap",ev.target.value)}
-                      style={{textAlign:"center",padding:"5px 4px",fontSize:13,
+                      style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
                               borderColor: !lapValid ? "#e53935" : undefined,
                               color: parseTime(e.lap) ? "#2e7d32" : "inherit"}} />
                   </div>
@@ -1290,12 +1287,12 @@ function ResultsTable({ allPlayers, period }) {
   allTests.forEach(t => { if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t; });
 
   const rows = Object.values(playerMap).sort((a, b) => {
-    const ta = a[showPeriod]?.finish_time, tb = b[showPeriod]?.finish_time;
+    const ta = a[showPeriod]?.lap_time, tb = b[showPeriod]?.lap_time;
     if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1;
     return ta - tb;
   });
 
-  const hasAnyPost   = rows.some(r => r.post?.finish_time);
+  const hasAnyPost   = rows.some(r => r.post?.lap_time);
   const medalColors  = ["#f5c842","#b0b0b0","#cd7f32"];
 
   return (
@@ -1314,29 +1311,25 @@ function ResultsTable({ allPlayers, period }) {
       </div>
 
       <div style={{display:"grid",
-                   gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
+                   gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
                    gap:6,padding:"7px 10px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",
                    fontSize:11,fontWeight:700,color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
         <div>#</div><div>Player</div>
-        <div style={{textAlign:"center"}}>Finish Pre</div>
-        <div style={{textAlign:"center"}}>Lap Pre</div>
-        {hasAnyPost && <div style={{textAlign:"center"}}>Finish Post</div>}
-        {hasAnyPost && <div style={{textAlign:"center"}}>Lap Post</div>}
+        <div style={{textAlign:"center"}}>Pre Lap</div>
+        {hasAnyPost && <div style={{textAlign:"center"}}>Post Lap</div>}
       </div>
 
       {rows.map((r, i) => {
-        const preFin  = r.pre?.finish_time  ?? null;
-        const postFin = r.post?.finish_time ?? null;
         const preLap  = r.pre?.lap_time     ?? null;
         const postLap = r.post?.lap_time    ?? null;
-        const diff    = preFin && postFin ? postFin - preFin : null;
+        const diff    = preLap && postLap ? postLap - preLap : null;
         const improved = diff !== null && diff < 0;
         const preNotes = r.pre?.notes, postNotes = r.post?.notes;
 
         return (
           <div key={r.name}>
             <div style={{display:"grid",
-                         gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
+                   gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
                          gap:6,padding:"9px 10px",alignItems:"center",
                          background: i%2===0 ? "#fff" : "#fafafa",
                          borderBottom:"1px solid #f0f0f0"}}>
@@ -1344,14 +1337,10 @@ function ResultsTable({ allPlayers, period }) {
                 {i<3?["🥇","🥈","🥉"][i]:i+1}
               </div>
               <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-              <div style={{textAlign:"center",fontSize:12,color:showPeriod==="pre"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="pre"?700:400}}>
-                {preFin ? fmtTime(preFin) : <span style={{color:"#ddd"}}>—</span>}
               </div>
               <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
                 {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
               </div>
-              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,color:showPeriod==="post"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="post"?700:400}}>
-                {postFin ? fmtTime(postFin) : <span style={{color:"#ddd"}}>—</span>}
               </div>}
               {hasAnyPost && <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
                 {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
@@ -1369,11 +1358,11 @@ function ResultsTable({ allPlayers, period }) {
       })}
 
       {(() => {
-        const timed = rows.filter(r => r[showPeriod]?.finish_time);
+        const timed = rows.filter(r => r[showPeriod]?.lap_time);
         if (!timed.length) return null;
-        const times = timed.map(r => r[showPeriod].finish_time);
+        const times = timed.map(r => r[showPeriod].lap_time);
         const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
-        const improved = rows.filter(r => r.pre?.finish_time && r.post?.finish_time && r.post.finish_time < r.pre.finish_time);
+        const improved = rows.filter(r => r.pre?.lap_time && r.post?.lap_time && r.post.lap_time < r.pre.lap_time);
         return (
           <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
             {[{label:"Squad avg",val:fmtTime(avg),color:"var(--primary)"},
