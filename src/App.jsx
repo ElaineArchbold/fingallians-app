@@ -905,127 +905,105 @@ function ScoresTab({ player }) {
 // ADMIN TAB
 // ══════════════════════════════════════════════════════════════════════════════
 // ─── Fitness Testing Component ────────────────────────────────────────────────
-function FitnessTestingSection({ allPlayers, showToast }) {
-  const [selectedPlayer, setSelectedPlayer] = useState("");
-  const [period, setPeriod]                 = useState("pre");
-  const [lapInput, setLapInput]             = useState("");   // mm:ss or seconds
-  const [laps, setLaps]                     = useState([]);
-  const [notes, setNotes]                   = useState("");
-  const [saving, setSaving]                 = useState(false);
-  const [existing, setExisting]             = useState(null); // loaded record
-  const [loading, setLoading]               = useState(false);
-  const [timerRunning, setTimerRunning]     = useState(false);
-  const [timerSecs, setTimerSecs]           = useState(0);
-  const [testDate, setTestDate]             = useState(new Date().toISOString().slice(0,10));
-  const timerRef                            = useRef(null);
+// ── Helpers shared across fitness components ──────────────────────────────────
+function fmtTime(s) {
+  if (!s && s !== 0) return "—";
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${m}:${String(sec).padStart(2,"0")}`;
+}
+function parseTime(val) {
+  // Accept m:ss, mm:ss, or raw seconds
+  const v = val.trim();
+  if (!v) return null;
+  if (v.includes(":")) {
+    const parts = v.split(":");
+    const m = parseInt(parts[0], 10) || 0;
+    const s = parseInt(parts[1], 10) || 0;
+    const total = m * 60 + s;
+    return total > 0 ? total : null;
+  }
+  const n = parseInt(v, 10);
+  return n > 0 ? n : null;
+}
 
-  // Load existing test when player + period changes
+// ── FitnessTestingSection ─────────────────────────────────────────────────────
+// Group entry: all players on one screen, type finish time + notes per player,
+// save the whole session at once. Then shows a ranked results table.
+function FitnessTestingSection({ allPlayers, showToast }) {
+  const [period,   setPeriod]   = useState("pre");
+  const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
+  const [view,     setView]     = useState("entry");   // "entry" | "results"
+
+  // entry state: { [playerId]: { time: "4:32", notes: "" } }
+  const [entries,  setEntries]  = useState({});
+  const [saving,   setSaving]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+
+  // Load any already-saved data for this period whenever period changes
   useEffect(() => {
-    if (!selectedPlayer) { setExisting(null); setLaps([]); setNotes(""); return; }
+    if (!allPlayers.length) return;
     setLoading(true);
     sb.from("fitness_tests")
       .select("*")
-      .eq("player_id", selectedPlayer)
+      .in("player_id", allPlayers.map(p => p.id))
       .eq("period", period)
-      .maybeSingle()
       .then(({ data }) => {
-        if (data) {
-          setExisting(data);
-          setLaps(data.lap_times || []);
-          setNotes(data.notes || "");
-          setTestDate(data.test_date || new Date().toISOString().slice(0,10));
-        } else {
-          setExisting(null);
-          setLaps([]);
-          setNotes("");
-        }
+        const map = {};
+        // Seed empty entries for every player first
+        allPlayers.forEach(p => { map[p.id] = { time: "", notes: "" }; });
+        // Overwrite with saved data
+        data?.forEach(r => {
+          map[r.player_id] = {
+            time:  r.finish_time ? fmtTime(r.finish_time) : "",
+            notes: r.notes || "",
+          };
+        });
+        setEntries(map);
         setLoading(false);
       });
-  }, [selectedPlayer, period]);
+  }, [period, allPlayers]);
 
-  // Stopwatch
-  useEffect(() => {
-    if (timerRunning) {
-      timerRef.current = setInterval(() => setTimerSecs(s => s + 1), 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [timerRunning]);
-
-  function formatSecs(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${String(sec).padStart(2,"0")}`;
+  function setField(playerId, field, value) {
+    setEntries(e => ({ ...e, [playerId]: { ...e[playerId], [field]: value } }));
   }
 
-  function parseLapInput(val) {
-    // Accept mm:ss or plain seconds
-    if (val.includes(":")) {
-      const [m, s] = val.split(":").map(Number);
-      return m * 60 + (s || 0);
-    }
-    return parseInt(val, 10) || 0;
-  }
-
-  function addLapManual() {
-    const secs = parseLapInput(lapInput.trim());
-    if (!secs) return;
-    setLaps(l => [...l, secs]);
-    setLapInput("");
-  }
-
-  function recordStopwatchLap() {
-    setLaps(l => [...l, timerSecs]);
-    setTimerSecs(0); // reset lap
-  }
-
-  function removeLap(i) {
-    setLaps(l => l.filter((_,idx) => idx !== i));
-  }
-
-  async function saveTest() {
-    if (!selectedPlayer) { showToast("⚠️ Select a player first"); return; }
+  async function saveAll() {
     setSaving(true);
-    const payload = {
-      player_id: selectedPlayer,
-      period,
-      test_date: testDate,
-      lap_times: laps,
-      notes: notes.trim() || null,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = existing
-      ? await sb.from("fitness_tests").update(payload).eq("id", existing.id)
-      : await sb.from("fitness_tests").insert(payload);
-    setSaving(false);
-    if (error) { showToast("❌ Save failed: " + error.message); }
-    else {
-      showToast(`✅ ${period === "pre" ? "Pre" : "Post"}-summer test saved!`);
-      setExisting({ ...existing, ...payload });
+    const rows = allPlayers
+      .map(p => {
+        const e = entries[p.id] || {};
+        const secs = parseTime(e.time);
+        return { player_id: p.id, period, test_date: testDate,
+                 finish_time: secs, notes: e.notes?.trim() || null,
+                 updated_at: new Date().toISOString() };
+      })
+      .filter(r => r.finish_time !== null || r.notes);  // skip completely blank rows
+
+    let errored = 0;
+    for (const row of rows) {
+      // Upsert on (player_id, period)
+      const { error } = await sb.from("fitness_tests")
+        .upsert(row, { onConflict: "player_id,period" });
+      if (error) errored++;
     }
+    setSaving(false);
+    if (errored) showToast(`⚠️ ${errored} record(s) failed to save`);
+    else { showToast(`✅ ${rows.length} result(s) saved!`); setView("results"); }
   }
 
-  const playerName = allPlayers.find(p => p.id === selectedPlayer)?.name || "";
-  const avgLap = laps.length ? Math.round(laps.reduce((a,b)=>a+b,0) / laps.length) : null;
-  const bestLap = laps.length ? Math.min(...laps) : null;
+  // Count how many have a time entered
+  const filledCount = Object.values(entries).filter(e => parseTime(e.time)).length;
 
   return (
     <div style={{marginTop:24}}>
       <div className="section-title">🏃 FITNESS TESTING</div>
-      <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
-        Record pre- and post-summer fitness tests for each player. Log timed laps and add coaching notes.
+      <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+        Record a finish time and coaching notes for each player. All boys run together — just type
+        in their times as they finish, then save the whole group at once.
       </div>
 
-      {/* Player + Period selectors */}
+      {/* ── Controls bar ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-        <div>
-          <label className="lbl">Player</label>
-          <select className="inp" value={selectedPlayer} onChange={e=>setSelectedPlayer(e.target.value)}>
-            <option value="">— Select player —</option>
-            {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
         <div>
           <label className="lbl">Test Period</label>
           <select className="inp" value={period} onChange={e=>setPeriod(e.target.value)}>
@@ -1033,163 +1011,269 @@ function FitnessTestingSection({ allPlayers, showToast }) {
             <option value="post">🏆 Post-Summer (Aug)</option>
           </select>
         </div>
+        <div>
+          <label className="lbl">Test Date</label>
+          <input className="inp" type="date" value={testDate}
+            onChange={e=>setTestDate(e.target.value)} />
+        </div>
       </div>
 
-      <div style={{marginBottom:12}}>
-        <label className="lbl">Test Date</label>
-        <input className="inp" type="date" value={testDate} onChange={e=>setTestDate(e.target.value)} style={{maxWidth:180}} />
-      </div>
-
-      {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"12px 0",fontSize:13}}>Loading…</div>}
-
-      {selectedPlayer && !loading && (
-        <>
-          {existing && (
-            <div style={{background:"#e8f5e9",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:12,color:"#2e7d32",fontWeight:700}}>
-              ✅ Existing {period === "pre" ? "pre" : "post"}-summer record found for {playerName} — editing it now.
-            </div>
-          )}
-
-          {/* ── Stopwatch ── */}
-          <div className="section-title" style={{fontSize:11,marginTop:4}}>STOPWATCH</div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,fontWeight:900,color:"var(--primary)",minWidth:80}}>
-              {formatSecs(timerSecs)}
-            </div>
-            <button className="btn btn-sm" style={{background:timerRunning?"#e53935":"var(--green)",color:"#fff",border:"none"}}
-              onClick={()=>setTimerRunning(r=>!r)}>
-              {timerRunning ? "⏸ Pause" : "▶ Start"}
-            </button>
-            <button className="btn btn-sm" style={{background:"var(--green)",color:"#fff",border:"none"}}
-              onClick={recordStopwatchLap} disabled={!timerRunning && timerSecs === 0}>
-              🏁 Record Lap
-            </button>
-            <button className="btn btn-sm btn-danger" onClick={()=>{setTimerRunning(false);setTimerSecs(0);}}>
-              Reset
-            </button>
-          </div>
-
-          {/* ── Manual lap entry ── */}
-          <div className="section-title" style={{fontSize:11}}>ADD LAP MANUALLY (mm:ss or seconds)</div>
-          <div style={{display:"flex",gap:8,marginBottom:12}}>
-            <input className="inp" placeholder="e.g. 1:05 or 65" value={lapInput}
-              onChange={e=>setLapInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&addLapManual()}
-              style={{flex:1,maxWidth:180}} />
-            <button className="btn btn-sm btn-green" onClick={addLapManual}>+ Add Lap</button>
-          </div>
-
-          {/* ── Lap list ── */}
-          {laps.length > 0 && (
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--mid)",marginBottom:6}}>
-                LAPS ({laps.length})
-              </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                {laps.map((s,i) => (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:4,background:"#f5f5f5",border:"1px solid #e0e0e0",borderRadius:20,padding:"4px 10px",fontSize:13}}>
-                    <span style={{fontWeight:700,color:"var(--primary)"}}>Lap {i+1}</span>
-                    <span style={{color:"var(--mid)"}}>{formatSecs(s)}</span>
-                    <button onClick={()=>removeLap(i)} style={{background:"none",border:"none",color:"#e53935",cursor:"pointer",fontSize:14,lineHeight:1,padding:"0 0 0 4px"}}>✕</button>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:12,fontSize:12,color:"var(--mid)"}}>
-                {bestLap !== null && <span>🏅 Best: <strong style={{color:"var(--primary)"}}>{formatSecs(bestLap)}</strong></span>}
-                {avgLap  !== null && <span>📊 Avg: <strong>{formatSecs(avgLap)}</strong></span>}
-              </div>
-            </div>
-          )}
-
-          {/* ── Notes ── */}
-          <div className="section-title" style={{fontSize:11}}>COACHING NOTES</div>
-          <textarea
-            className="inp"
-            placeholder="e.g. Good effort, strong on the ball, needs to work on left side..."
-            value={notes}
-            onChange={e=>setNotes(e.target.value)}
-            rows={3}
-            style={{resize:"vertical",marginBottom:12}}
-          />
-
-          <button className="btn btn-green" onClick={saveTest} disabled={saving} style={{width:"100%"}}>
-            {saving ? "Saving…" : `💾 Save ${period === "pre" ? "Pre" : "Post"}-Summer Test`}
+      {/* ── View toggle ── */}
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {["entry","results"].map(v => (
+          <button key={v} className="btn btn-sm"
+            style={{background: view===v ? "var(--primary)" : "transparent",
+                    color: view===v ? "#fff" : "var(--mid)",
+                    border: `1px solid ${view===v ? "var(--primary)" : "#ddd"}`}}
+            onClick={()=>setView(v)}>
+            {v === "entry" ? "✏️ Enter Times" : "📊 Results Table"}
           </button>
+        ))}
+      </div>
+
+      {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>}
+
+      {/* ── ENTRY VIEW ── */}
+      {!loading && view === "entry" && (
+        <>
+          <div style={{fontSize:11,color:"var(--muted)",marginBottom:10}}>
+            Type finish times as <strong>m:ss</strong> (e.g. <strong>4:32</strong>) or plain seconds.
+            Notes are optional — one per player.
+          </div>
+
+          {/* Header row */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr",gap:8,
+                       padding:"6px 10px",background:"#f5f5f5",borderRadius:8,
+                       marginBottom:6,fontSize:11,fontWeight:700,
+                       color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
+            <div>Player</div>
+            <div style={{textAlign:"center"}}>Finish Time</div>
+            <div>Coaching Notes</div>
+          </div>
+
+          {allPlayers.map((p, i) => {
+            const e = entries[p.id] || { time:"", notes:"" };
+            const valid = parseTime(e.time) !== null;
+            return (
+              <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr",gap:8,
+                                      alignItems:"center",padding:"6px 4px",
+                                      borderBottom: i < allPlayers.length-1 ? "1px solid #f0f0f0" : "none"}}>
+                {/* Name */}
+                <div style={{fontSize:13,fontWeight:700,color:"var(--dark)",
+                             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {p.name}
+                </div>
+                {/* Time input */}
+                <input
+                  className="inp"
+                  placeholder="m:ss"
+                  value={e.time}
+                  onChange={ev => setField(p.id, "time", ev.target.value)}
+                  style={{textAlign:"center", padding:"6px 8px", fontSize:14, fontWeight:700,
+                          borderColor: e.time && !valid ? "#e53935" : undefined,
+                          color: valid ? "var(--primary)" : "inherit"}}
+                />
+                {/* Notes input */}
+                <input
+                  className="inp"
+                  placeholder="e.g. Great effort, watch left foot…"
+                  value={e.notes}
+                  onChange={ev => setField(p.id, "notes", ev.target.value)}
+                  style={{fontSize:12, padding:"6px 8px"}}
+                />
+              </div>
+            );
+          })}
+
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                       marginTop:16,gap:12}}>
+            <div style={{fontSize:12,color:"var(--muted)"}}>
+              {filledCount} of {allPlayers.length} players timed
+            </div>
+            <button className="btn btn-green" onClick={saveAll} disabled={saving || filledCount === 0}
+              style={{minWidth:160}}>
+              {saving ? "Saving…" : `💾 Save ${period==="pre"?"Pre":"Post"}-Summer Results`}
+            </button>
+          </div>
         </>
       )}
 
-      {/* ── Comparison view ── */}
-      {selectedPlayer && !loading && (
-        <ComparisonView playerId={selectedPlayer} playerName={playerName} />
+      {/* ── RESULTS TABLE VIEW ── */}
+      {!loading && view === "results" && (
+        <ResultsTable allPlayers={allPlayers} period={period} />
       )}
     </div>
   );
 }
 
-// Shows pre vs post side by side once both exist
-function ComparisonView({ playerId, playerName }) {
-  const [tests, setTests] = useState({ pre: null, post: null });
+// ── ResultsTable ──────────────────────────────────────────────────────────────
+// Ranked table showing pre, post, and improvement for every player.
+function ResultsTable({ allPlayers, period }) {
+  const [allTests, setAllTests] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showPeriod, setShowPeriod] = useState(period); // which period to rank by
 
   useEffect(() => {
-    if (!playerId) return;
-    sb.from("fitness_tests").select("*").eq("player_id", playerId).then(({ data }) => {
-      const map = { pre: null, post: null };
-      data?.forEach(r => { map[r.period] = r; });
-      setTests(map);
-    });
-  }, [playerId]);
+    if (!allPlayers.length) return;
+    sb.from("fitness_tests")
+      .select("*")
+      .in("player_id", allPlayers.map(p => p.id))
+      .then(({ data }) => { setAllTests(data || []); setLoading(false); });
+  }, [allPlayers]);
 
-  if (!tests.pre && !tests.post) return null;
+  if (loading) return <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>;
 
-  function formatSecs(s) {
-    const m = Math.floor(s / 60); const sec = s % 60;
-    return `${m}:${String(sec).padStart(2,"0")}`;
-  }
+  // Build per-player map
+  const playerMap = {};
+  allPlayers.forEach(p => { playerMap[p.id] = { name: p.name, pre: null, post: null }; });
+  allTests.forEach(t => {
+    if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t;
+  });
 
-  function bestLap(laps) { return laps?.length ? Math.min(...laps) : null; }
-  function avgLap(laps)  { return laps?.length ? Math.round(laps.reduce((a,b)=>a+b,0)/laps.length) : null; }
+  // Sort by selected period finish_time (nulls last)
+  const rows = Object.values(playerMap).sort((a, b) => {
+    const ta = a[showPeriod]?.finish_time;
+    const tb = b[showPeriod]?.finish_time;
+    if (!ta && !tb) return 0;
+    if (!ta) return 1;
+    if (!tb) return -1;
+    return ta - tb;
+  });
 
-  const preBest = bestLap(tests.pre?.lap_times);
-  const postBest = bestLap(tests.post?.lap_times);
-  const improved = preBest && postBest && postBest < preBest;
+  const hasAnyPost = rows.some(r => r.post?.finish_time);
+  const medalColors = ["#f5c842","#b0b0b0","#cd7f32"];
 
   return (
-    <div style={{marginTop:20,borderTop:"1px solid #e0e0e0",paddingTop:16}}>
-      <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--mid)",marginBottom:10}}>
-        📊 {playerName} — PRE vs POST COMPARISON
+    <div>
+      {/* Period toggle for ranking */}
+      <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+        <span style={{fontSize:11,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",
+                      letterSpacing:"0.06em"}}>Rank by:</span>
+        {["pre","post"].map(p => (
+          <button key={p} className="btn btn-sm"
+            style={{background: showPeriod===p ? "var(--primary)" : "transparent",
+                    color: showPeriod===p ? "#fff" : "var(--mid)",
+                    border:`1px solid ${showPeriod===p ? "var(--primary)" : "#ddd"}`}}
+            onClick={()=>setShowPeriod(p)}>
+            {p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}
+          </button>
+        ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        {["pre","post"].map(p => {
-          const t = tests[p];
-          if (!t) return (
-            <div key={p} style={{background:"#fafafa",border:"1px dashed #e0e0e0",borderRadius:10,padding:"12px",textAlign:"center"}}>
-              <div style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",fontWeight:700,marginBottom:4}}>{p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}</div>
-              <div style={{fontSize:12,color:"#bbb"}}>Not recorded yet</div>
-            </div>
-          );
-          const best = bestLap(t.lap_times);
-          const avg  = avgLap(t.lap_times);
-          return (
-            <div key={p} style={{background: p==="post" && improved ? "#e8f5e9" : "#f9f9f9", border:`1px solid ${p==="post" && improved ? "#a5d6a7" : "#e0e0e0"}`,borderRadius:10,padding:"12px"}}>
-              <div style={{fontSize:11,color: p==="pre" ? "#e65100" : "#2e7d32",textTransform:"uppercase",fontWeight:900,marginBottom:6}}>
-                {p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}
+
+      {/* Table header */}
+      <div style={{display:"grid",
+                   gridTemplateColumns: hasAnyPost ? "28px 1fr 70px 70px 70px" : "28px 1fr 70px",
+                   gap:6, padding:"7px 10px",
+                   background:"#f5f5f5", borderRadius:"8px 8px 0 0",
+                   fontSize:11, fontWeight:700, color:"var(--mid)",
+                   textTransform:"uppercase", letterSpacing:"0.06em"}}>
+        <div>#</div>
+        <div>Player</div>
+        <div style={{textAlign:"center"}}>Pre</div>
+        {hasAnyPost && <div style={{textAlign:"center"}}>Post</div>}
+        {hasAnyPost && <div style={{textAlign:"center"}}>Diff</div>}
+      </div>
+
+      {rows.map((r, i) => {
+        const preSecs  = r.pre?.finish_time  ?? null;
+        const postSecs = r.post?.finish_time ?? null;
+        const diff     = (preSecs && postSecs) ? postSecs - preSecs : null;
+        const improved = diff !== null && diff < 0;
+        const slower   = diff !== null && diff > 0;
+        const preNotes  = r.pre?.notes;
+        const postNotes = r.post?.notes;
+
+        return (
+          <div key={r.name}>
+            <div style={{display:"grid",
+                         gridTemplateColumns: hasAnyPost ? "28px 1fr 70px 70px 70px" : "28px 1fr 70px",
+                         gap:6, padding:"9px 10px",
+                         background: i % 2 === 0 ? "#fff" : "#fafafa",
+                         borderBottom:"1px solid #f0f0f0",
+                         alignItems:"center"}}>
+              {/* Rank / medal */}
+              <div style={{fontSize: i < 3 ? 16 : 12, textAlign:"center",
+                           color: i < 3 ? medalColors[i] : "#ccc",
+                           fontWeight:900}}>
+                {i < 3 ? ["🥇","🥈","🥉"][i] : i+1}
               </div>
-              <div style={{fontSize:11,color:"var(--muted)",marginBottom:6}}>{t.test_date}</div>
-              {t.lap_times?.length > 0 && <>
-                <div style={{fontSize:12,marginBottom:2}}>Laps: <strong>{t.lap_times.length}</strong></div>
-                {best && <div style={{fontSize:12,marginBottom:2}}>Best: <strong style={{color:"var(--primary)"}}>{formatSecs(best)}</strong></div>}
-                {avg  && <div style={{fontSize:12,marginBottom:4}}>Avg: <strong>{formatSecs(avg)}</strong></div>}
-              </>}
-              {t.notes && <div style={{fontSize:11,color:"var(--mid)",fontStyle:"italic",borderTop:"1px solid #e8e8e8",paddingTop:6,marginTop:4,lineHeight:1.5}}>{t.notes}</div>}
+              {/* Name */}
+              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",
+                           textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {r.name}
+              </div>
+              {/* Pre time */}
+              <div style={{textAlign:"center",fontSize:13,
+                           color: showPeriod==="pre" ? "var(--primary)" : "var(--mid)",
+                           fontWeight: showPeriod==="pre" ? 700 : 400}}>
+                {preSecs ? fmtTime(preSecs) : <span style={{color:"#ddd"}}>—</span>}
+              </div>
+              {/* Post time */}
+              {hasAnyPost && (
+                <div style={{textAlign:"center",fontSize:13,
+                             color: showPeriod==="post" ? "var(--primary)" : "var(--mid)",
+                             fontWeight: showPeriod==="post" ? 700 : 400}}>
+                  {postSecs ? fmtTime(postSecs) : <span style={{color:"#ddd"}}>—</span>}
+                </div>
+              )}
+              {/* Diff */}
+              {hasAnyPost && (
+                <div style={{textAlign:"center",fontSize:12,fontWeight:700,
+                             color: improved ? "#2e7d32" : slower ? "#e53935" : "#ccc"}}>
+                  {diff === null ? "—"
+                    : improved ? `▼ ${fmtTime(Math.abs(diff))}`
+                    : slower   ? `▲ ${fmtTime(diff)}`
+                    : "="}
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
-      {improved && (
-        <div style={{marginTop:10,background:"#e8f5e9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#2e7d32",fontWeight:700,textAlign:"center"}}>
-          🎉 Improved by {formatSecs(preBest - postBest)} on best lap time!
-        </div>
-      )}
+            {/* Notes row — shown inline if any exist */}
+            {(preNotes || postNotes) && (
+              <div style={{padding:"4px 10px 8px 44px",background: i%2===0?"#fff":"#fafafa",
+                           borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
+                {preNotes && (
+                  <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
+                    <span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>
+                    {preNotes}
+                  </div>
+                )}
+                {postNotes && (
+                  <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
+                    <span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>
+                    {postNotes}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Squad summary */}
+      {(() => {
+        const timed = rows.filter(r => r[showPeriod]?.finish_time);
+        if (!timed.length) return null;
+        const times = timed.map(r => r[showPeriod].finish_time);
+        const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+        const best = Math.min(...times);
+        const improved = rows.filter(r => r.pre?.finish_time && r.post?.finish_time && r.post.finish_time < r.pre.finish_time);
+        return (
+          <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
+            {[
+              {label:"Squad avg", val:fmtTime(avg), color:"var(--primary)"},
+              {label:"Fastest", val:fmtTime(best), color:"#2e7d32"},
+              ...(improved.length ? [{label:"Improved", val:`${improved.length} boys`, color:"#2e7d32"}] : []),
+            ].map(stat => (
+              <div key={stat.label} style={{flex:1,minWidth:90,background:"#f9f9f9",
+                    border:"1px solid #eee",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:18,fontWeight:900,color:stat.color}}>{stat.val}</div>
+                <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",
+                             letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
