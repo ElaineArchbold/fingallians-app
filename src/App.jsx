@@ -1239,60 +1239,95 @@ function NoteAccordionBody({ sport, cn, coachEmail, coachName, coachColor, onCha
 
 // ── ResultsTable ──────────────────────────────────────────────────────────────
 function ResultsTable({ allPlayers, period }) {
-  const [allTests,    setAllTests]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showPeriod,  setShowPeriod]  = useState(period);
+  const [allTests,   setAllTests]   = useState([]);
+  const [ptsMap,     setPtsMap]     = useState({});  // { playerId: pts }
+  const [loading,    setLoading]    = useState(true);
+  const [showPeriod, setShowPeriod] = useState(period);
 
   useEffect(() => {
     if (!allPlayers.length) return;
-    sb.from("fitness_tests").select("*")
-      .in("player_id", allPlayers.map(p => p.id))
-      .then(({ data }) => { setAllTests(data || []); setLoading(false); });
+    const ids = allPlayers.map(p => p.id);
+    Promise.all([
+      sb.from("fitness_tests").select("*").in("player_id", ids),
+      sb.from("task_completions").select("player_id,task_key").in("player_id", ids),
+    ]).then(([{ data: tests }, { data: comps }]) => {
+      setAllTests(tests || []);
+      // Calculate points per player
+      const map = {};
+      ids.forEach(id => { map[id] = 0; });
+      // Group completions by player
+      const byPlayer = {};
+      comps?.forEach(r => {
+        if (!byPlayer[r.player_id]) byPlayer[r.player_id] = {};
+        byPlayer[r.player_id][r.task_key] = true;
+      });
+      ids.forEach(id => { map[id] = totalPts(byPlayer[id] || {}); });
+      setPtsMap(map);
+      setLoading(false);
+    });
   }, [allPlayers]);
 
-  if (loading) return <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>;
+  if (loading) return <div style={{textAlign:"center",color:"#9a7070",padding:"20px 0",fontSize:13}}>Loading…</div>;
 
   const playerMap = {};
-  allPlayers.forEach(p => { playerMap[p.id] = { name: p.name, pre: null, post: null }; });
+  allPlayers.forEach(p => { playerMap[p.id] = { id: p.id, name: p.name, pre: null, post: null }; });
   allTests.forEach(t => { if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t; });
 
-  const rows = Object.values(playerMap).sort((a, b) => {
+  // Combined rank: lap time rank + inverse pts rank (lower = better)
+  // Players with no lap time go to the bottom
+  const base = Object.values(playerMap);
+  const maxPts = Math.max(...base.map(r => ptsMap[r.id] || 0), 1);
+
+  const rows = base.sort((a, b) => {
     const ta = a[showPeriod]?.lap_time, tb = b[showPeriod]?.lap_time;
-    if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1;
-    return ta - tb;
+    const pa = ptsMap[a.id] || 0, pb = ptsMap[b.id] || 0;
+    // If both have a lap time, combine: normalised lap (lower=better) minus normalised pts (higher=better)
+    if (ta && tb) {
+      const scoreA = (ta / 600) - (pa / maxPts);   // lower is better
+      const scoreB = (tb / 600) - (pb / maxPts);
+      return scoreA - scoreB;
+    }
+    if (!ta && !tb) return pb - pa;  // no times: rank by pts
+    if (!ta) return 1;
+    if (!tb) return -1;
   });
 
-  const hasAnyPost   = rows.some(r => r.post?.lap_time);
-  const medalColors  = ["#f5c842","#b0b0b0","#cd7f32"];
+  const hasAnyPost  = rows.some(r => r.post?.lap_time);
+  const medalColors = ["#f5c842","#b0b0b0","#cd7f32"];
+  const cols = hasAnyPost
+    ? "28px 1fr 70px 70px 60px 55px"
+    : "28px 1fr 80px 55px";
 
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
-        <span style={{fontSize:11,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Rank by:</span>
+        <span style={{fontSize:11,color:"#9a7070",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Rank by:</span>
         {["pre","post"].map(p => (
-          <button key={p}
-            onClick={() => setShowPeriod(p)}
-            style={{
-              padding:"6px 14px", borderRadius:8, cursor:"pointer",
-              fontFamily:"inherit", fontSize:13, fontWeight:700,
-              background: showPeriod===p ? "#a31621" : "#fff",
-              color:      showPeriod===p ? "#fff"    : "#a31621",
-              border:     "2px solid #a31621",
-              opacity:    showPeriod===p ? 1 : 0.45,
-              transition:"all 0.15s",
-            }}>
+          <button key={p} onClick={() => setShowPeriod(p)} style={{
+            padding:"6px 14px", borderRadius:8, cursor:"pointer",
+            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            background: showPeriod===p ? "#a31621" : "#fff",
+            color:      showPeriod===p ? "#fff"    : "#a31621",
+            border:     "2px solid #a31621",
+            opacity:    showPeriod===p ? 1 : 0.45,
+            transition:"all 0.15s",
+          }}>
             {p === "pre" ? "🌱 Pre" : "🏆 Post"}
           </button>
         ))}
       </div>
 
-      <div style={{display:"grid",
-                   gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
-                   gap:6,padding:"7px 10px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",
-                   fontSize:11,fontWeight:700,color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
-        <div>#</div><div>Player</div>
+      {/* Header */}
+      <div style={{display:"grid", gridTemplateColumns:cols, gap:6,
+                   padding:"7px 10px", background:"#f5f5f5", borderRadius:"8px 8px 0 0",
+                   fontSize:11, fontWeight:700, color:"#5a3a3d",
+                   textTransform:"uppercase", letterSpacing:"0.06em"}}>
+        <div>#</div>
+        <div>Player</div>
         <div style={{textAlign:"center"}}>Pre Lap</div>
         {hasAnyPost && <div style={{textAlign:"center"}}>Post Lap</div>}
+        {hasAnyPost && <div style={{textAlign:"center"}}>Diff</div>}
+        <div style={{textAlign:"center"}}>Pts</div>
       </div>
 
       {rows.map((r, i) => {
@@ -1301,56 +1336,84 @@ function ResultsTable({ allPlayers, period }) {
         const diff     = preLap && postLap ? postLap - preLap : null;
         const improved = diff !== null && diff < 0;
         const slower   = diff !== null && diff > 0;
+        const pts      = ptsMap[r.id] || 0;
         const preNotes = r.pre?.notes, postNotes = r.post?.notes;
+
         return (
           <div key={r.name}>
-            <div style={{display:"grid",
-                         gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
+            <div style={{display:"grid", gridTemplateColumns:cols,
                          gap:6, padding:"9px 10px", alignItems:"center",
                          background: i%2===0 ? "#fff" : "#fafafa",
                          borderBottom:"1px solid #f0f0f0"}}>
-              <div style={{fontSize:i<3?16:12,textAlign:"center",color:i<3?medalColors[i]:"#ccc",fontWeight:900}}>
-                {i<3?["🥇","🥈","🥉"][i]:i+1}
+              {/* Rank */}
+              <div style={{fontSize:i<3?16:12, textAlign:"center",
+                           color:i<3?medalColors[i]:"#ccc", fontWeight:900}}>
+                {i<3 ? ["🥇","🥈","🥉"][i] : i+1}
               </div>
-              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-              <div style={{textAlign:"center",fontSize:13,color:showPeriod==="pre"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="pre"?700:400}}>
+              {/* Name */}
+              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",
+                           textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {r.name}
+              </div>
+              {/* Pre lap */}
+              <div style={{textAlign:"center",fontSize:13,
+                           color:showPeriod==="pre"?"#a31621":"#5a3a3d",
+                           fontWeight:showPeriod==="pre"?700:400}}>
                 {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
               </div>
-              {hasAnyPost && <div style={{textAlign:"center",fontSize:13,color:showPeriod==="post"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="post"?700:400}}>
+              {/* Post lap */}
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:13,
+                           color:showPeriod==="post"?"#a31621":"#5a3a3d",
+                           fontWeight:showPeriod==="post"?700:400}}>
                 {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
               </div>}
+              {/* Diff */}
               {hasAnyPost && <div style={{textAlign:"center",fontSize:12,fontWeight:700,
-                                         color:improved?"#2e7d32":slower?"#e53935":"#ccc"}}>
-                {diff===null?"—":improved?`▼ ${fmtTime(Math.abs(diff))}`:slower?`▲ ${fmtTime(diff)}`:"="}
+                           color:improved?"#2e7d32":slower?"#e53935":"#ccc"}}>
+                {diff===null ? "—" : improved ? `▼${fmtTime(Math.abs(diff))}` : slower ? `▲${fmtTime(diff)}` : "="}
               </div>}
+              {/* Points */}
+              <div style={{textAlign:"center"}}>
+                <span style={{background:"#fff4cc",color:"#1a0a0b",fontSize:12,
+                              fontWeight:900,padding:"2px 8px",borderRadius:10,
+                              border:"1px solid #d4a017"}}>
+                  {pts}
+                </span>
+              </div>
             </div>
+            {/* Notes */}
             {(preNotes||postNotes) && (
               <div style={{padding:"4px 10px 8px 44px",background:i%2===0?"#fff":"#fafafa",
                            borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
-                {preNotes  && <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}</div>}
-                {postNotes && <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}</div>}
+                {preNotes  && <div style={{fontSize:11,color:"#9a7070",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}</div>}
+                {postNotes && <div style={{fontSize:11,color:"#9a7070",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}</div>}
               </div>
             )}
           </div>
         );
       })}
 
+      {/* Squad summary */}
       {(() => {
         const timed = rows.filter(r => r[showPeriod]?.lap_time);
         if (!timed.length) return null;
-        const times = timed.map(r => r[showPeriod].lap_time);
-        const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+        const times    = timed.map(r => r[showPeriod].lap_time);
+        const avg      = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
         const improved = rows.filter(r => r.pre?.lap_time && r.post?.lap_time && r.post.lap_time < r.pre.lap_time);
+        const topPts   = Math.max(...rows.map(r => ptsMap[r.id]||0));
         return (
           <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
-            {[{label:"Squad avg",val:fmtTime(avg),color:"var(--primary)"},
-              {label:"Fastest",val:fmtTime(Math.min(...times)),color:"#2e7d32"},
-              ...(improved.length?[{label:"Improved",val:`${improved.length} boys`,color:"#2e7d32"}]:[])
-            ].map(stat=>(
-              <div key={stat.label} style={{flex:1,minWidth:90,background:"#f9f9f9",border:"1px solid #eee",
-                    borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontSize:18,fontWeight:900,color:stat.color}}>{stat.val}</div>
-                <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
+            {[
+              {label:"Squad avg",  val:fmtTime(avg),              color:"#a31621"},
+              {label:"Fastest",    val:fmtTime(Math.min(...times)),color:"#2e7d32"},
+              {label:"Top pts",    val:`${topPts} pts`,            color:"#d4a017"},
+              ...(improved.length ? [{label:"Improved", val:`${improved.length} boys`, color:"#2e7d32"}] : []),
+            ].map(stat => (
+              <div key={stat.label} style={{flex:1,minWidth:80,background:"#f9f9f9",
+                    border:"1px solid #eee",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:17,fontWeight:900,color:stat.color}}>{stat.val}</div>
+                <div style={{fontSize:10,color:"#9a7070",textTransform:"uppercase",
+                             letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -1359,6 +1422,8 @@ function ResultsTable({ allPlayers, period }) {
     </div>
   );
 }
+
+
 
 
 function AdminTab({ allPlayers, onRefresh, showToast }) {
