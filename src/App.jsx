@@ -3,7 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
-const ADMIN_EMAIL       = "e.t.archbold@gmail.com";
+const ADMIN_EMAILS = [
+  "e.t.archbold@gmail.com",
+  "seangallagher2506@gmail.com",
+  "dodplumbing@gmail.com",
+];
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -302,7 +306,7 @@ export default function App() {
   useEffect(() => {
     if (!session) { setPlayer(null); setChecks({}); return; }
     loadPlayerData();
-    if (session.user.email === ADMIN_EMAIL) loadAllPlayers();
+    if (ADMIN_EMAILS.includes(session.user.email)) loadAllPlayers();
   }, [session]);
 
   async function loadPlayerData() {
@@ -348,7 +352,7 @@ export default function App() {
     setTab("home");
   }
 
-  const isAdmin = session?.user?.email === ADMIN_EMAIL;
+  const isAdmin = ADMIN_EMAILS.includes(session?.user?.email);
   const pts     = totalPts(checks);
   const weeksDone = WEEKS.filter(w => weekPts(w, checks) === weekMaxPts(w)).length;
 
@@ -361,7 +365,10 @@ export default function App() {
     { id:"home", label:"Home" },
     { id:"plan", label:"Plan" },
     { id:"scores", label:"Scores" },
-    ...(isAdmin ? [{ id:"admin", label:"⚙️ Admin" }] : []),
+    ...(isAdmin ? [{ id:"fitness",  label:"🏃 Fitness"  }] : []),
+    ...(isAdmin ? [{ id:"football", label:"⚽ Football" }] : []),
+    ...(isAdmin ? [{ id:"hurling",  label:"🏑 Hurling"  }] : []),
+    ...(isAdmin ? [{ id:"admin",    label:"⚙️ Admin"    }] : []),
   ];
 
   return (
@@ -404,6 +411,39 @@ export default function App() {
 
         {session && (player || isAdmin) && tab === "scores" && (
           <ScoresTab player={player} />
+        )}
+
+        {session && isAdmin && tab === "fitness" && (
+          <div className="admin-wrap">
+            <div className="admin-banner">
+              <div style={{fontSize:28}}>🏃</div>
+              <div>
+                <h2>FITNESS TESTING</h2>
+                <p>Pre &amp; post-summer results</p>
+              </div>
+            </div>
+            <FitnessTestingSection allPlayers={allPlayers} showToast={showToast} />
+          </div>
+        )}
+
+        {session && isAdmin && tab === "football" && (
+          <CoachNotesTab
+            sport="football"
+            label="⚽ Football"
+            allPlayers={allPlayers}
+            coachEmail={session.user.email}
+            showToast={showToast}
+          />
+        )}
+
+        {session && isAdmin && tab === "hurling" && (
+          <CoachNotesTab
+            sport="hurling"
+            label="🏑 Hurling"
+            allPlayers={allPlayers}
+            coachEmail={session.user.email}
+            showToast={showToast}
+          />
         )}
 
         {session && isAdmin && tab === "admin" && (
@@ -927,14 +967,14 @@ function parseTime(val) {
 }
 
 // ── FitnessTestingSection ─────────────────────────────────────────────────────
-// Group entry: all players on one screen, type finish time + notes per player,
+// Group entry: all players on one screen, type finish time + lap time + notes,
 // save the whole session at once. Then shows a ranked results table.
 function FitnessTestingSection({ allPlayers, showToast }) {
   const [period,   setPeriod]   = useState("pre");
   const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
   const [view,     setView]     = useState("entry");   // "entry" | "results"
 
-  // entry state: { [playerId]: { time: "4:32", notes: "" } }
+  // entry state: { [playerId]: { finish: "4:32", lap: "1:20", notes: "" } }
   const [entries,  setEntries]  = useState({});
   const [saving,   setSaving]   = useState(false);
   const [loading,  setLoading]  = useState(false);
@@ -949,13 +989,12 @@ function FitnessTestingSection({ allPlayers, showToast }) {
       .eq("period", period)
       .then(({ data }) => {
         const map = {};
-        // Seed empty entries for every player first
-        allPlayers.forEach(p => { map[p.id] = { time: "", notes: "" }; });
-        // Overwrite with saved data
+        allPlayers.forEach(p => { map[p.id] = { finish: "", lap: "", notes: "" }; });
         data?.forEach(r => {
           map[r.player_id] = {
-            time:  r.finish_time ? fmtTime(r.finish_time) : "",
-            notes: r.notes || "",
+            finish: r.finish_time ? fmtTime(r.finish_time) : "",
+            lap:    r.lap_time    ? fmtTime(r.lap_time)    : "",
+            notes:  r.notes || "",
           };
         });
         setEntries(map);
@@ -972,16 +1011,17 @@ function FitnessTestingSection({ allPlayers, showToast }) {
     const rows = allPlayers
       .map(p => {
         const e = entries[p.id] || {};
-        const secs = parseTime(e.time);
+        const finishSecs = parseTime(e.finish);
+        const lapSecs    = parseTime(e.lap);
         return { player_id: p.id, period, test_date: testDate,
-                 finish_time: secs, notes: e.notes?.trim() || null,
+                 finish_time: finishSecs, lap_time: lapSecs,
+                 notes: e.notes?.trim() || null,
                  updated_at: new Date().toISOString() };
       })
-      .filter(r => r.finish_time !== null || r.notes);  // skip completely blank rows
+      .filter(r => r.finish_time !== null || r.lap_time !== null || r.notes);
 
     let errored = 0;
     for (const row of rows) {
-      // Upsert on (player_id, period)
       const { error } = await sb.from("fitness_tests")
         .upsert(row, { onConflict: "player_id,period" });
       if (error) errored++;
@@ -991,8 +1031,7 @@ function FitnessTestingSection({ allPlayers, showToast }) {
     else { showToast(`✅ ${rows.length} result(s) saved!`); setView("results"); }
   }
 
-  // Count how many have a time entered
-  const filledCount = Object.values(entries).filter(e => parseTime(e.time)).length;
+  const filledCount = Object.values(entries).filter(e => parseTime(e.finish) || parseTime(e.lap)).length;
 
   return (
     <div style={{marginTop:24}}>
@@ -1037,50 +1076,45 @@ function FitnessTestingSection({ allPlayers, showToast }) {
       {!loading && view === "entry" && (
         <>
           <div style={{fontSize:11,color:"var(--muted)",marginBottom:10}}>
-            Type finish times as <strong>m:ss</strong> (e.g. <strong>4:32</strong>) or plain seconds.
-            Notes are optional — one per player.
+            Type times as <strong>m:ss</strong> (e.g. <strong>4:32</strong>) or plain seconds. Notes are optional.
           </div>
 
           {/* Header row */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr",gap:8,
+          <div style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr",gap:8,
                        padding:"6px 10px",background:"#f5f5f5",borderRadius:8,
                        marginBottom:6,fontSize:11,fontWeight:700,
                        color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
             <div>Player</div>
-            <div style={{textAlign:"center"}}>Finish Time</div>
-            <div>Coaching Notes</div>
+            <div style={{textAlign:"center"}}>Finish</div>
+            <div style={{textAlign:"center"}}>Lap</div>
+            <div>Coach Notes</div>
           </div>
 
           {allPlayers.map((p, i) => {
-            const e = entries[p.id] || { time:"", notes:"" };
-            const valid = parseTime(e.time) !== null;
+            const e = entries[p.id] || { finish:"", lap:"", notes:"" };
+            const finishValid = e.finish ? parseTime(e.finish) !== null : true;
+            const lapValid    = e.lap    ? parseTime(e.lap)    !== null : true;
             return (
-              <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr",gap:8,
+              <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr",gap:8,
                                       alignItems:"center",padding:"6px 4px",
                                       borderBottom: i < allPlayers.length-1 ? "1px solid #f0f0f0" : "none"}}>
-                {/* Name */}
                 <div style={{fontSize:13,fontWeight:700,color:"var(--dark)",
                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {p.name}
                 </div>
-                {/* Time input */}
-                <input
-                  className="inp"
-                  placeholder="m:ss"
-                  value={e.time}
-                  onChange={ev => setField(p.id, "time", ev.target.value)}
-                  style={{textAlign:"center", padding:"6px 8px", fontSize:14, fontWeight:700,
-                          borderColor: e.time && !valid ? "#e53935" : undefined,
-                          color: valid ? "var(--primary)" : "inherit"}}
-                />
-                {/* Notes input */}
-                <input
-                  className="inp"
-                  placeholder="e.g. Great effort, watch left foot…"
-                  value={e.notes}
+                <input className="inp" placeholder="m:ss" value={e.finish}
+                  onChange={ev => setField(p.id, "finish", ev.target.value)}
+                  style={{textAlign:"center",padding:"6px 4px",fontSize:13,fontWeight:700,
+                          borderColor: !finishValid ? "#e53935" : undefined,
+                          color: parseTime(e.finish) ? "var(--primary)" : "inherit"}} />
+                <input className="inp" placeholder="m:ss" value={e.lap}
+                  onChange={ev => setField(p.id, "lap", ev.target.value)}
+                  style={{textAlign:"center",padding:"6px 4px",fontSize:13,
+                          borderColor: !lapValid ? "#e53935" : undefined,
+                          color: parseTime(e.lap) ? "#2e7d32" : "inherit"}} />
+                <input className="inp" placeholder="Notes…" value={e.notes}
                   onChange={ev => setField(p.id, "notes", ev.target.value)}
-                  style={{fontSize:12, padding:"6px 8px"}}
-                />
+                  style={{fontSize:12,padding:"6px 8px"}} />
               </div>
             );
           })}
@@ -1162,22 +1196,25 @@ function ResultsTable({ allPlayers, period }) {
 
       {/* Table header */}
       <div style={{display:"grid",
-                   gridTemplateColumns: hasAnyPost ? "28px 1fr 70px 70px 70px" : "28px 1fr 70px",
+                   gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
                    gap:6, padding:"7px 10px",
                    background:"#f5f5f5", borderRadius:"8px 8px 0 0",
                    fontSize:11, fontWeight:700, color:"var(--mid)",
                    textTransform:"uppercase", letterSpacing:"0.06em"}}>
         <div>#</div>
         <div>Player</div>
-        <div style={{textAlign:"center"}}>Pre</div>
-        {hasAnyPost && <div style={{textAlign:"center"}}>Post</div>}
-        {hasAnyPost && <div style={{textAlign:"center"}}>Diff</div>}
+        <div style={{textAlign:"center"}}>Finish Pre</div>
+        <div style={{textAlign:"center"}}>Lap Pre</div>
+        {hasAnyPost && <div style={{textAlign:"center"}}>Finish Post</div>}
+        {hasAnyPost && <div style={{textAlign:"center"}}>Lap Post</div>}
       </div>
 
       {rows.map((r, i) => {
-        const preSecs  = r.pre?.finish_time  ?? null;
-        const postSecs = r.post?.finish_time ?? null;
-        const diff     = (preSecs && postSecs) ? postSecs - preSecs : null;
+        const preFin   = r.pre?.finish_time ?? null;
+        const postFin  = r.post?.finish_time ?? null;
+        const preLap   = r.pre?.lap_time    ?? null;
+        const postLap  = r.post?.lap_time   ?? null;
+        const diff     = (preFin && postFin) ? postFin - preFin : null;
         const improved = diff !== null && diff < 0;
         const slower   = diff !== null && diff > 0;
         const preNotes  = r.pre?.notes;
@@ -1186,61 +1223,51 @@ function ResultsTable({ allPlayers, period }) {
         return (
           <div key={r.name}>
             <div style={{display:"grid",
-                         gridTemplateColumns: hasAnyPost ? "28px 1fr 70px 70px 70px" : "28px 1fr 70px",
+                         gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
                          gap:6, padding:"9px 10px",
                          background: i % 2 === 0 ? "#fff" : "#fafafa",
                          borderBottom:"1px solid #f0f0f0",
                          alignItems:"center"}}>
-              {/* Rank / medal */}
               <div style={{fontSize: i < 3 ? 16 : 12, textAlign:"center",
-                           color: i < 3 ? medalColors[i] : "#ccc",
-                           fontWeight:900}}>
+                           color: i < 3 ? medalColors[i] : "#ccc", fontWeight:900}}>
                 {i < 3 ? ["🥇","🥈","🥉"][i] : i+1}
               </div>
-              {/* Name */}
               <div style={{fontSize:13,fontWeight:700,overflow:"hidden",
                            textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                 {r.name}
               </div>
-              {/* Pre time */}
-              <div style={{textAlign:"center",fontSize:13,
+              <div style={{textAlign:"center",fontSize:12,
                            color: showPeriod==="pre" ? "var(--primary)" : "var(--mid)",
                            fontWeight: showPeriod==="pre" ? 700 : 400}}>
-                {preSecs ? fmtTime(preSecs) : <span style={{color:"#ddd"}}>—</span>}
+                {preFin ? fmtTime(preFin) : <span style={{color:"#ddd"}}>—</span>}
               </div>
-              {/* Post time */}
+              <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
+                {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
+              </div>
               {hasAnyPost && (
-                <div style={{textAlign:"center",fontSize:13,
+                <div style={{textAlign:"center",fontSize:12,
                              color: showPeriod==="post" ? "var(--primary)" : "var(--mid)",
                              fontWeight: showPeriod==="post" ? 700 : 400}}>
-                  {postSecs ? fmtTime(postSecs) : <span style={{color:"#ddd"}}>—</span>}
+                  {postFin ? fmtTime(postFin) : <span style={{color:"#ddd"}}>—</span>}
                 </div>
               )}
-              {/* Diff */}
               {hasAnyPost && (
-                <div style={{textAlign:"center",fontSize:12,fontWeight:700,
-                             color: improved ? "#2e7d32" : slower ? "#e53935" : "#ccc"}}>
-                  {diff === null ? "—"
-                    : improved ? `▼ ${fmtTime(Math.abs(diff))}`
-                    : slower   ? `▲ ${fmtTime(diff)}`
-                    : "="}
+                <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
+                  {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
                 </div>
               )}
             </div>
-            {/* Notes row — shown inline if any exist */}
             {(preNotes || postNotes) && (
               <div style={{padding:"4px 10px 8px 44px",background: i%2===0?"#fff":"#fafafa",
                            borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
                 {preNotes && (
                   <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
-                    <span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>
-                    {preNotes}
+                    <span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}
                   </div>
                 )}
                 {postNotes && (
                   <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
-                    <span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>
-                    {postNotes}
+                    <span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}
                   </div>
                 )}
               </div>
@@ -1278,7 +1305,169 @@ function ResultsTable({ allPlayers, period }) {
   );
 }
 
-// ─── Admin Tab ────────────────────────────────────────────────────────────────
+// ── CoachNotesTab ─────────────────────────────────────────────────────────────
+// Each coach (identified by email) can add one note per player per sport.
+// All coaches' notes are visible to everyone with admin access.
+function CoachNotesTab({ sport, label, allPlayers, coachEmail, showToast }) {
+  // notes[playerId] = { myNote: "", saved: [ {coach_email, note, updated_at}, ... ] }
+  const [notes,   setNotes]   = useState({});
+  const [saving,  setSaving]  = useState({});
+  const [loading, setLoading] = useState(true);
+  const [session, setSessionDate] = useState(new Date().toISOString().slice(0,10));
+
+  useEffect(() => {
+    if (!allPlayers.length) return;
+    sb.from("coach_notes")
+      .select("*")
+      .eq("sport", sport)
+      .in("player_id", allPlayers.map(p => p.id))
+      .then(({ data }) => {
+        const map = {};
+        allPlayers.forEach(p => { map[p.id] = { myNote: "", saved: [] }; });
+        // Group by player_id
+        data?.forEach(r => {
+          if (!map[r.player_id]) map[r.player_id] = { myNote: "", saved: [] };
+          map[r.player_id].saved.push(r);
+          // Pre-fill this coach's own note
+          if (r.coach_email === coachEmail) map[r.player_id].myNote = r.note || "";
+        });
+        setNotes(map);
+        setLoading(false);
+      });
+  }, [sport, allPlayers, coachEmail]);
+
+  function setMyNote(playerId, val) {
+    setNotes(n => ({ ...n, [playerId]: { ...n[playerId], myNote: val } }));
+  }
+
+  async function saveNote(playerId) {
+    const val = notes[playerId]?.myNote?.trim();
+    setSaving(s => ({ ...s, [playerId]: true }));
+    const payload = {
+      player_id:   playerId,
+      sport,
+      coach_email: coachEmail,
+      note:        val || null,
+      session_date: session,
+      updated_at:  new Date().toISOString(),
+    };
+    const { error } = await sb.from("coach_notes")
+      .upsert(payload, { onConflict: "player_id,sport,coach_email" });
+    setSaving(s => ({ ...s, [playerId]: false }));
+    if (error) { showToast("❌ Save failed"); return; }
+    showToast("✅ Note saved!");
+    // Update local saved list
+    setNotes(n => {
+      const existing = n[playerId].saved.filter(s => s.coach_email !== coachEmail);
+      return { ...n, [playerId]: { ...n[playerId], saved: [...existing, payload] } };
+    });
+  }
+
+  // Friendly coach label from email
+  function coachName(email) {
+    const names = {
+      "e.t.archbold@gmail.com":    "Elaine",
+      "seangallagher2506@gmail.com": "Sean",
+      "dodplumbing@gmail.com":     "Coach 3",
+    };
+    return names[email] || email.split("@")[0];
+  }
+
+  const coachColors = {
+    "e.t.archbold@gmail.com":      "#1565c0",
+    "seangallagher2506@gmail.com": "#2e7d32",
+    "dodplumbing@gmail.com":       "#6a1b9a",
+  };
+
+  return (
+    <div className="admin-wrap">
+      <div className="admin-banner">
+        <div style={{fontSize:28}}>{sport === "football" ? "⚽" : "🏑"}</div>
+        <div>
+          <h2>{label.toUpperCase()} NOTES</h2>
+          <p>Per-player coaching notes · visible to all coaches</p>
+        </div>
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <label className="lbl">Session Date</label>
+        <input className="inp" type="date" value={session}
+          onChange={e => setSessionDate(e.target.value)} style={{maxWidth:180}} />
+      </div>
+
+      {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>}
+
+      {!loading && allPlayers.map((p, i) => {
+        const n = notes[p.id] || { myNote: "", saved: [] };
+        // Other coaches' notes (not mine)
+        const otherNotes = n.saved.filter(s => s.coach_email !== coachEmail && s.note);
+
+        return (
+          <div key={p.id} style={{
+            background: i%2===0 ? "#fff" : "#fafafa",
+            border:"1px solid #efefef", borderRadius:10,
+            padding:"12px 14px", marginBottom:8
+          }}>
+            {/* Player name */}
+            <div style={{fontWeight:700,fontSize:14,color:"var(--dark)",marginBottom:8}}>
+              {p.name}
+            </div>
+
+            {/* Other coaches' notes (read-only) */}
+            {otherNotes.length > 0 && (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+                {otherNotes.map(s => (
+                  <div key={s.coach_email} style={{
+                    background:"#f5f5f5", borderRadius:6,
+                    padding:"6px 10px", fontSize:12, lineHeight:1.5,
+                    borderLeft: `3px solid ${coachColors[s.coach_email] || "#999"}`
+                  }}>
+                    <span style={{
+                      fontWeight:700, fontSize:11,
+                      color: coachColors[s.coach_email] || "#666",
+                      textTransform:"uppercase", letterSpacing:"0.05em"
+                    }}>
+                      {coachName(s.coach_email)}:&nbsp;
+                    </span>
+                    {s.note}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* My note input */}
+            <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,fontWeight:700,color: coachColors[coachEmail]||"var(--mid)",
+                             textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
+                  {coachName(coachEmail)} (you)
+                </div>
+                <textarea
+                  className="inp"
+                  placeholder={`Your ${sport} note for ${p.name}…`}
+                  value={n.myNote}
+                  onChange={e => setMyNote(p.id, e.target.value)}
+                  rows={2}
+                  style={{resize:"vertical",fontSize:12,padding:"7px 10px"}}
+                />
+              </div>
+              <button
+                className="btn btn-sm btn-green"
+                onClick={() => saveNote(p.id)}
+                disabled={saving[p.id]}
+                style={{marginTop:20,flexShrink:0,minWidth:60}}
+              >
+                {saving[p.id] ? "…" : "Save"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Admin Tab ─────────────────────────────────────────────────────────────────
 function AdminTab({ allPlayers, onRefresh, showToast }) {
   const [newName, setNewName]         = useState("");
   const [adding, setAdding]           = useState(false);
@@ -1397,9 +1586,6 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
           })}
         </>
       )}
-
-      {/* Fitness Testing */}
-      <FitnessTestingSection allPlayers={allPlayers} showToast={showToast} />
 
       <div style={{marginTop:20,textAlign:"center"}}>
         <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
