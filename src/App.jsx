@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
@@ -328,26 +328,16 @@ export default function App() {
     setAllPlayers(data || []);
   }
 
- async function toggleTask(taskKey, pts, label) {
+  async function toggleTask(taskKey, pts, label) {
     if (!player) return;
     const done = checks[taskKey];
     if (done) {
-      const { error } = await sb
-        .from("task_completions")
-        .delete()
-        .eq("player_id", player.id)
-        .eq("task_key", taskKey);
-      if (!error) {
-        setChecks(c => { const n={...c}; delete n[taskKey]; return n; });
-      }
+      await sb.from("task_completions").delete().eq("player_id", player.id).eq("task_key", taskKey);
+      setChecks(c => { const n={...c}; delete n[taskKey]; return n; });
     } else {
-      const { error } = await sb
-        .from("task_completions")
-        .insert({ player_id: player.id, task_key: taskKey });
-      if (!error) {
-        setChecks(c => ({ ...c, [taskKey]: true }));
-        showToast(`✅ ${label} logged! +${pts} pts`);
-      }
+      await sb.from("task_completions").insert({ player_id: player.id, task_key: taskKey });
+      setChecks(c => ({ ...c, [taskKey]: true }));
+      showToast(`✅ ${label} logged! +${pts} pts`);
     }
   }
 
@@ -533,9 +523,7 @@ function AuthScreen({ showToast }) {
                 </div>
                 <div className="tc-section">
                   <strong>Data & Privacy</strong>
-                  <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing: <a href="mailto:fingallians2014boys@gmail.com" style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",fontWeight:900,padding:"8px 16px",borderRadius:20,textDecoration:"none"}}>
-  📧 fingallians2014boys@gmail.com
-</a></p>
+                  <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing <strong>fingallians2014boys@gmail.com</strong>.</p>
                 </div>
                 <div className="tc-section">
                   <strong>Participation</strong>
@@ -819,9 +807,7 @@ function PlanTab({ checks, onToggle, player }) {
         </div>
         <div className="tc-section">
           <strong>Data & Privacy</strong>
-          <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing: <a href="mailto:fingallians2014boys@gmail.com" style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",fontWeight:900,padding:"8px 16px",borderRadius:20,textDecoration:"none"}}>
-  📧 fingallians2014boys@gmail.com
-</a></p>
+          <p>To use this app we store your child's first and last name and your email address. No other personal information is collected or stored. Your data is not shared with any third party and is used solely to manage participation in the 2026 Summer Challenge. You can request deletion of your data at any time by emailing <strong>fingallians2014boys@gmail.com</strong>.</p>
         </div>
         <div className="tc-section">
           <strong>Participation</strong>
@@ -918,6 +904,297 @@ function ScoresTab({ player }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // ADMIN TAB
 // ══════════════════════════════════════════════════════════════════════════════
+// ─── Fitness Testing Component ────────────────────────────────────────────────
+function FitnessTestingSection({ allPlayers, showToast }) {
+  const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [period, setPeriod]                 = useState("pre");
+  const [lapInput, setLapInput]             = useState("");   // mm:ss or seconds
+  const [laps, setLaps]                     = useState([]);
+  const [notes, setNotes]                   = useState("");
+  const [saving, setSaving]                 = useState(false);
+  const [existing, setExisting]             = useState(null); // loaded record
+  const [loading, setLoading]               = useState(false);
+  const [timerRunning, setTimerRunning]     = useState(false);
+  const [timerSecs, setTimerSecs]           = useState(0);
+  const [testDate, setTestDate]             = useState(new Date().toISOString().slice(0,10));
+  const timerRef                            = useRef(null);
+
+  // Load existing test when player + period changes
+  useEffect(() => {
+    if (!selectedPlayer) { setExisting(null); setLaps([]); setNotes(""); return; }
+    setLoading(true);
+    sb.from("fitness_tests")
+      .select("*")
+      .eq("player_id", selectedPlayer)
+      .eq("period", period)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setExisting(data);
+          setLaps(data.lap_times || []);
+          setNotes(data.notes || "");
+          setTestDate(data.test_date || new Date().toISOString().slice(0,10));
+        } else {
+          setExisting(null);
+          setLaps([]);
+          setNotes("");
+        }
+        setLoading(false);
+      });
+  }, [selectedPlayer, period]);
+
+  // Stopwatch
+  useEffect(() => {
+    if (timerRunning) {
+      timerRef.current = setInterval(() => setTimerSecs(s => s + 1), 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [timerRunning]);
+
+  function formatSecs(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${String(sec).padStart(2,"0")}`;
+  }
+
+  function parseLapInput(val) {
+    // Accept mm:ss or plain seconds
+    if (val.includes(":")) {
+      const [m, s] = val.split(":").map(Number);
+      return m * 60 + (s || 0);
+    }
+    return parseInt(val, 10) || 0;
+  }
+
+  function addLapManual() {
+    const secs = parseLapInput(lapInput.trim());
+    if (!secs) return;
+    setLaps(l => [...l, secs]);
+    setLapInput("");
+  }
+
+  function recordStopwatchLap() {
+    setLaps(l => [...l, timerSecs]);
+    setTimerSecs(0); // reset lap
+  }
+
+  function removeLap(i) {
+    setLaps(l => l.filter((_,idx) => idx !== i));
+  }
+
+  async function saveTest() {
+    if (!selectedPlayer) { showToast("⚠️ Select a player first"); return; }
+    setSaving(true);
+    const payload = {
+      player_id: selectedPlayer,
+      period,
+      test_date: testDate,
+      lap_times: laps,
+      notes: notes.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = existing
+      ? await sb.from("fitness_tests").update(payload).eq("id", existing.id)
+      : await sb.from("fitness_tests").insert(payload);
+    setSaving(false);
+    if (error) { showToast("❌ Save failed: " + error.message); }
+    else {
+      showToast(`✅ ${period === "pre" ? "Pre" : "Post"}-summer test saved!`);
+      setExisting({ ...existing, ...payload });
+    }
+  }
+
+  const playerName = allPlayers.find(p => p.id === selectedPlayer)?.name || "";
+  const avgLap = laps.length ? Math.round(laps.reduce((a,b)=>a+b,0) / laps.length) : null;
+  const bestLap = laps.length ? Math.min(...laps) : null;
+
+  return (
+    <div style={{marginTop:24}}>
+      <div className="section-title">🏃 FITNESS TESTING</div>
+      <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
+        Record pre- and post-summer fitness tests for each player. Log timed laps and add coaching notes.
+      </div>
+
+      {/* Player + Period selectors */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <div>
+          <label className="lbl">Player</label>
+          <select className="inp" value={selectedPlayer} onChange={e=>setSelectedPlayer(e.target.value)}>
+            <option value="">— Select player —</option>
+            {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="lbl">Test Period</label>
+          <select className="inp" value={period} onChange={e=>setPeriod(e.target.value)}>
+            <option value="pre">🌱 Pre-Summer (Jun)</option>
+            <option value="post">🏆 Post-Summer (Aug)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{marginBottom:12}}>
+        <label className="lbl">Test Date</label>
+        <input className="inp" type="date" value={testDate} onChange={e=>setTestDate(e.target.value)} style={{maxWidth:180}} />
+      </div>
+
+      {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"12px 0",fontSize:13}}>Loading…</div>}
+
+      {selectedPlayer && !loading && (
+        <>
+          {existing && (
+            <div style={{background:"#e8f5e9",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:12,color:"#2e7d32",fontWeight:700}}>
+              ✅ Existing {period === "pre" ? "pre" : "post"}-summer record found for {playerName} — editing it now.
+            </div>
+          )}
+
+          {/* ── Stopwatch ── */}
+          <div className="section-title" style={{fontSize:11,marginTop:4}}>STOPWATCH</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,fontWeight:900,color:"var(--primary)",minWidth:80}}>
+              {formatSecs(timerSecs)}
+            </div>
+            <button className="btn btn-sm" style={{background:timerRunning?"#e53935":"var(--green)",color:"#fff",border:"none"}}
+              onClick={()=>setTimerRunning(r=>!r)}>
+              {timerRunning ? "⏸ Pause" : "▶ Start"}
+            </button>
+            <button className="btn btn-sm" style={{background:"var(--green)",color:"#fff",border:"none"}}
+              onClick={recordStopwatchLap} disabled={!timerRunning && timerSecs === 0}>
+              🏁 Record Lap
+            </button>
+            <button className="btn btn-sm btn-danger" onClick={()=>{setTimerRunning(false);setTimerSecs(0);}}>
+              Reset
+            </button>
+          </div>
+
+          {/* ── Manual lap entry ── */}
+          <div className="section-title" style={{fontSize:11}}>ADD LAP MANUALLY (mm:ss or seconds)</div>
+          <div style={{display:"flex",gap:8,marginBottom:12}}>
+            <input className="inp" placeholder="e.g. 1:05 or 65" value={lapInput}
+              onChange={e=>setLapInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&addLapManual()}
+              style={{flex:1,maxWidth:180}} />
+            <button className="btn btn-sm btn-green" onClick={addLapManual}>+ Add Lap</button>
+          </div>
+
+          {/* ── Lap list ── */}
+          {laps.length > 0 && (
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--mid)",marginBottom:6}}>
+                LAPS ({laps.length})
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                {laps.map((s,i) => (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:4,background:"#f5f5f5",border:"1px solid #e0e0e0",borderRadius:20,padding:"4px 10px",fontSize:13}}>
+                    <span style={{fontWeight:700,color:"var(--primary)"}}>Lap {i+1}</span>
+                    <span style={{color:"var(--mid)"}}>{formatSecs(s)}</span>
+                    <button onClick={()=>removeLap(i)} style={{background:"none",border:"none",color:"#e53935",cursor:"pointer",fontSize:14,lineHeight:1,padding:"0 0 0 4px"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:12,fontSize:12,color:"var(--mid)"}}>
+                {bestLap !== null && <span>🏅 Best: <strong style={{color:"var(--primary)"}}>{formatSecs(bestLap)}</strong></span>}
+                {avgLap  !== null && <span>📊 Avg: <strong>{formatSecs(avgLap)}</strong></span>}
+              </div>
+            </div>
+          )}
+
+          {/* ── Notes ── */}
+          <div className="section-title" style={{fontSize:11}}>COACHING NOTES</div>
+          <textarea
+            className="inp"
+            placeholder="e.g. Good effort, strong on the ball, needs to work on left side..."
+            value={notes}
+            onChange={e=>setNotes(e.target.value)}
+            rows={3}
+            style={{resize:"vertical",marginBottom:12}}
+          />
+
+          <button className="btn btn-green" onClick={saveTest} disabled={saving} style={{width:"100%"}}>
+            {saving ? "Saving…" : `💾 Save ${period === "pre" ? "Pre" : "Post"}-Summer Test`}
+          </button>
+        </>
+      )}
+
+      {/* ── Comparison view ── */}
+      {selectedPlayer && !loading && (
+        <ComparisonView playerId={selectedPlayer} playerName={playerName} />
+      )}
+    </div>
+  );
+}
+
+// Shows pre vs post side by side once both exist
+function ComparisonView({ playerId, playerName }) {
+  const [tests, setTests] = useState({ pre: null, post: null });
+
+  useEffect(() => {
+    if (!playerId) return;
+    sb.from("fitness_tests").select("*").eq("player_id", playerId).then(({ data }) => {
+      const map = { pre: null, post: null };
+      data?.forEach(r => { map[r.period] = r; });
+      setTests(map);
+    });
+  }, [playerId]);
+
+  if (!tests.pre && !tests.post) return null;
+
+  function formatSecs(s) {
+    const m = Math.floor(s / 60); const sec = s % 60;
+    return `${m}:${String(sec).padStart(2,"0")}`;
+  }
+
+  function bestLap(laps) { return laps?.length ? Math.min(...laps) : null; }
+  function avgLap(laps)  { return laps?.length ? Math.round(laps.reduce((a,b)=>a+b,0)/laps.length) : null; }
+
+  const preBest = bestLap(tests.pre?.lap_times);
+  const postBest = bestLap(tests.post?.lap_times);
+  const improved = preBest && postBest && postBest < preBest;
+
+  return (
+    <div style={{marginTop:20,borderTop:"1px solid #e0e0e0",paddingTop:16}}>
+      <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--mid)",marginBottom:10}}>
+        📊 {playerName} — PRE vs POST COMPARISON
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        {["pre","post"].map(p => {
+          const t = tests[p];
+          if (!t) return (
+            <div key={p} style={{background:"#fafafa",border:"1px dashed #e0e0e0",borderRadius:10,padding:"12px",textAlign:"center"}}>
+              <div style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",fontWeight:700,marginBottom:4}}>{p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}</div>
+              <div style={{fontSize:12,color:"#bbb"}}>Not recorded yet</div>
+            </div>
+          );
+          const best = bestLap(t.lap_times);
+          const avg  = avgLap(t.lap_times);
+          return (
+            <div key={p} style={{background: p==="post" && improved ? "#e8f5e9" : "#f9f9f9", border:`1px solid ${p==="post" && improved ? "#a5d6a7" : "#e0e0e0"}`,borderRadius:10,padding:"12px"}}>
+              <div style={{fontSize:11,color: p==="pre" ? "#e65100" : "#2e7d32",textTransform:"uppercase",fontWeight:900,marginBottom:6}}>
+                {p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}
+              </div>
+              <div style={{fontSize:11,color:"var(--muted)",marginBottom:6}}>{t.test_date}</div>
+              {t.lap_times?.length > 0 && <>
+                <div style={{fontSize:12,marginBottom:2}}>Laps: <strong>{t.lap_times.length}</strong></div>
+                {best && <div style={{fontSize:12,marginBottom:2}}>Best: <strong style={{color:"var(--primary)"}}>{formatSecs(best)}</strong></div>}
+                {avg  && <div style={{fontSize:12,marginBottom:4}}>Avg: <strong>{formatSecs(avg)}</strong></div>}
+              </>}
+              {t.notes && <div style={{fontSize:11,color:"var(--mid)",fontStyle:"italic",borderTop:"1px solid #e8e8e8",paddingTop:6,marginTop:4,lineHeight:1.5}}>{t.notes}</div>}
+            </div>
+          );
+        })}
+      </div>
+      {improved && (
+        <div style={{marginTop:10,background:"#e8f5e9",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#2e7d32",fontWeight:700,textAlign:"center"}}>
+          🎉 Improved by {formatSecs(preBest - postBest)} on best lap time!
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Admin Tab ────────────────────────────────────────────────────────────────
 function AdminTab({ allPlayers, onRefresh, showToast }) {
   const [newName, setNewName]         = useState("");
   const [adding, setAdding]           = useState(false);
@@ -1036,6 +1313,9 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
           })}
         </>
       )}
+
+      {/* Fitness Testing */}
+      <FitnessTestingSection allPlayers={allPlayers} showToast={showToast} />
 
       <div style={{marginTop:20,textAlign:"center"}}>
         <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
