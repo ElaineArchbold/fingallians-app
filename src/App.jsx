@@ -1320,30 +1320,32 @@ function ResultsTable({ allPlayers, period }) {
       </div>
 
       {rows.map((r, i) => {
-        const preLap  = r.pre?.lap_time     ?? null;
-        const postLap = r.post?.lap_time    ?? null;
-        const diff    = preLap && postLap ? postLap - preLap : null;
+        const preLap   = r.pre?.lap_time  ?? null;
+        const postLap  = r.post?.lap_time ?? null;
+        const diff     = preLap && postLap ? postLap - preLap : null;
         const improved = diff !== null && diff < 0;
+        const slower   = diff !== null && diff > 0;
         const preNotes = r.pre?.notes, postNotes = r.post?.notes;
-
         return (
           <div key={r.name}>
             <div style={{display:"grid",
-                   gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
-                         gap:6,padding:"9px 10px",alignItems:"center",
+                         gridTemplateColumns: hasAnyPost ? "28px 1fr 80px 80px 70px" : "28px 1fr 80px",
+                         gap:6, padding:"9px 10px", alignItems:"center",
                          background: i%2===0 ? "#fff" : "#fafafa",
                          borderBottom:"1px solid #f0f0f0"}}>
               <div style={{fontSize:i<3?16:12,textAlign:"center",color:i<3?medalColors[i]:"#ccc",fontWeight:900}}>
                 {i<3?["🥇","🥈","🥉"][i]:i+1}
               </div>
               <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-              </div>
-              <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
+              <div style={{textAlign:"center",fontSize:13,color:showPeriod==="pre"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="pre"?700:400}}>
                 {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
               </div>
-              </div>}
-              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:13,color:showPeriod==="post"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="post"?700:400}}>
                 {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
+              </div>}
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,fontWeight:700,
+                                         color:improved?"#2e7d32":slower?"#e53935":"#ccc"}}>
+                {diff===null?"—":improved?`▼ ${fmtTime(Math.abs(diff))}`:slower?`▲ ${fmtTime(diff)}`:"="}
               </div>}
             </div>
             {(preNotes||postNotes) && (
