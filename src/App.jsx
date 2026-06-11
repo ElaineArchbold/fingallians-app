@@ -200,8 +200,8 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .wk-hero-hd h2{font-family:'Barlow Condensed',sans-serif;font-size:28px;letter-spacing:0.02em}
 .wk-hero-hd .sport-badge{font-size:13px;font-weight:700;margin-top:4px}
 .wk-hero-hd .wk-dates{font-size:12px;opacity:0.65;margin-top:2px}
-.runs-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.run-chip{font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(0,0,0,0.08);cursor:pointer;transition:all 0.15s;border:2px solid transparent}
+.runs-chips{display:flex;flex-wrap:nowrap;gap:6px;margin-top:10px;justify-content:center;width:100%}
+.run-chip{font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(0,0,0,0.08);cursor:pointer;transition:all 0.15s;border:2px solid transparent;flex:1;text-align:center;white-space:nowrap;min-width:0}
 .run-chip.done{background:var(--g);color:white;border-color:var(--g)}
 .run-chip:hover:not(.done){background:rgba(0,0,0,0.14)}
 .prog-bar-bg{height:6px;background:#f0dede;border-radius:3px;overflow:hidden;margin:12px 18px 4px}
@@ -1072,12 +1072,16 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       {/* View toggle */}
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {["entry","results"].map(v => (
-          <button key={v} className="btn btn-sm"
-            style={{background: view===v ? "var(--primary)" : "#f5f5f5",
-                    color: view===v ? "#fff" : "#444",
-                    border:`1px solid ${view===v ? "var(--primary)" : "#ddd"}`,
-                    fontWeight:600}}
-            onClick={() => setView(v)}>
+          <button key={v}
+            onClick={() => setView(v)}
+            style={{
+              padding:"7px 16px", borderRadius:8, cursor:"pointer",
+              fontFamily:"inherit", fontSize:14, fontWeight:700,
+              background: view===v ? "var(--primary)" : "#f0f0f0",
+              color:      view===v ? "#fff"           : "#333",
+              border:     view===v ? "2px solid var(--primary)" : "2px solid #ccc",
+              transition:"all 0.15s",
+            }}>
             {v === "entry" ? "✏️ Enter Times" : "📊 Results Table"}
           </button>
         ))}
@@ -1300,11 +1304,16 @@ function ResultsTable({ allPlayers, period }) {
       <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
         <span style={{fontSize:11,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Rank by:</span>
         {["pre","post"].map(p => (
-          <button key={p} className="btn btn-sm"
-            style={{background: showPeriod===p ? "var(--primary)" : "transparent",
-                    color: showPeriod===p ? "#fff" : "var(--mid)",
-                    border:`1px solid ${showPeriod===p ? "var(--primary)" : "#ddd"}`}}
-            onClick={() => setShowPeriod(p)}>
+          <button key={p}
+            onClick={() => setShowPeriod(p)}
+            style={{
+              padding:"6px 14px", borderRadius:8, cursor:"pointer",
+              fontFamily:"inherit", fontSize:13, fontWeight:700,
+              background: showPeriod===p ? "var(--primary)" : "#f0f0f0",
+              color:      showPeriod===p ? "#fff"           : "#333",
+              border:     showPeriod===p ? "2px solid var(--primary)" : "2px solid #ccc",
+              transition:"all 0.15s",
+            }}>
             {p === "pre" ? "🌱 Pre" : "🏆 Post"}
           </button>
         ))}
