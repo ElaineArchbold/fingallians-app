@@ -1069,15 +1069,15 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
         </div>
       </div>
 
-      {/* View toggle — active=red, inactive=50% opacity */}
-      <div style={{display:"flex",borderRadius:10,overflow:"hidden",border:"2px solid var(--primary)",marginBottom:16,width:"100%"}}>
-        {[["entry","✏️ Enter Times"],["results","📊 Results Table"]].map(([v,label]) => (
+      {/* View toggle */}
+      <div style={{display:"flex",borderRadius:10,overflow:"hidden",border:"2px solid #a31621",marginBottom:16,width:"100%"}}>
+        {[["entry","Enter Times"],["results","Results Table"]].map(([v,label]) => (
           <button key={v} onClick={() => setView(v)} style={{
             flex:1, padding:"10px 8px", border:"none", cursor:"pointer",
             fontFamily:"inherit", fontSize:13, fontWeight:700,
-            background: view===v ? "var(--primary)" : "#fff",
-            color:      view===v ? "#fff" : "var(--primary)",
-            opacity:    view===v ? 1 : 0.5,
+            background: view===v ? "#a31621" : "#fff",
+            color:      view===v ? "#fff"    : "#a31621",
+            opacity:    view===v ? 1         : 0.45,
             transition:"all 0.15s",
           }}>{label}</button>
         ))}
@@ -1172,12 +1172,12 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
                     {/* Save button inside accordion */}
                     <button onClick={() => savePlayer(p.id)} disabled={!!saving[p.id]}
-                      style={{padding:"9px",borderRadius:8,border:"none",
-                              background:saving[p.id]?"#ccc":"var(--primary)",
-                              color:"#fff",fontWeight:700,fontSize:13,
+                      style={{padding:"11px",borderRadius:8,border:"none",
+                              background:saving[p.id]?"#ccc":"#a31621",
+                              color:"#fff",fontWeight:700,fontSize:14,
                               cursor:saving[p.id]?"not-allowed":"pointer",
-                              fontFamily:"inherit",width:"100%"}}>
-                      {saving[p.id] ? "Saving…" : `💾 Save Notes`}
+                              fontFamily:"inherit",width:"100%",letterSpacing:"0.04em"}}>
+                      {saving[p.id] ? "Saving…" : "Save"}
                     </button>
                   </div>
                 )}
@@ -1275,9 +1275,10 @@ function ResultsTable({ allPlayers, period }) {
             style={{
               padding:"6px 14px", borderRadius:8, cursor:"pointer",
               fontFamily:"inherit", fontSize:13, fontWeight:700,
-              background: showPeriod===p ? "var(--primary)" : "#f0f0f0",
-              color:      showPeriod===p ? "#fff"           : "#333",
-              border:     showPeriod===p ? "2px solid var(--primary)" : "2px solid #ccc",
+              background: showPeriod===p ? "#a31621" : "#fff",
+              color:      showPeriod===p ? "#fff"    : "#a31621",
+              border:     "2px solid #a31621",
+              opacity:    showPeriod===p ? 1 : 0.45,
               transition:"all 0.15s",
             }}>
             {p === "pre" ? "🌱 Pre" : "🏆 Post"}
