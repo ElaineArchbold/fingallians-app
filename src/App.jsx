@@ -366,8 +366,6 @@ export default function App() {
     { id:"plan", label:"Plan" },
     { id:"scores", label:"Scores" },
     ...(isAdmin ? [{ id:"fitness",  label:"🏃 Fitness"  }] : []),
-    ...(isAdmin ? [{ id:"football", label:"⚽ Football" }] : []),
-    ...(isAdmin ? [{ id:"hurling",  label:"🏑 Hurling"  }] : []),
     ...(isAdmin ? [{ id:"admin",    label:"⚙️ Admin"    }] : []),
   ];
 
@@ -419,31 +417,11 @@ export default function App() {
               <div style={{fontSize:28}}>🏃</div>
               <div>
                 <h2>FITNESS TESTING</h2>
-                <p>Pre &amp; post-summer results</p>
+                <p>Times · lap times · coach notes</p>
               </div>
             </div>
-            <FitnessTestingSection allPlayers={allPlayers} showToast={showToast} />
+            <FitnessTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
           </div>
-        )}
-
-        {session && isAdmin && tab === "football" && (
-          <CoachNotesTab
-            sport="football"
-            label="⚽ Football"
-            allPlayers={allPlayers}
-            coachEmail={session.user.email}
-            showToast={showToast}
-          />
-        )}
-
-        {session && isAdmin && tab === "hurling" && (
-          <CoachNotesTab
-            sport="hurling"
-            label="🏑 Hurling"
-            allPlayers={allPlayers}
-            coachEmail={session.user.email}
-            showToast={showToast}
-          />
         )}
 
         {session && isAdmin && tab === "admin" && (
@@ -966,105 +944,139 @@ function parseTime(val) {
   return n > 0 ? n : null;
 }
 
-// ── FitnessTestingSection ─────────────────────────────────────────────────────
-// Group entry: all players on one screen, type finish time + lap time + notes,
-// save the whole session at once. Then shows a ranked results table.
-function FitnessTestingSection({ allPlayers, showToast }) {
+// ── FitnessTab ────────────────────────────────────────────────────────────────
+// Unified view: one card per player with times + accordion for football/hurling notes.
+// Two sub-views: "entry" (type times for whole squad) and "results" (ranked table).
+function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [period,   setPeriod]   = useState("pre");
   const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
-  const [view,     setView]     = useState("entry");   // "entry" | "results"
+  const [view,     setView]     = useState("entry");
+  const [entries,  setEntries]  = useState({});  // { [pid]: { finish, lap, notes } }
+  const [cnotes,   setCnotes]   = useState({});  // { [pid]: { football: {myNote,saved[]}, hurling: {myNote,saved[]} } }
+  const [open,     setOpen]     = useState({});  // { [pid+sport]: bool } accordion state
+  const [saving,   setSaving]   = useState({});
+  const [loading,  setLoading]  = useState(true);
 
-  // entry state: { [playerId]: { finish: "4:32", lap: "1:20", notes: "" } }
-  const [entries,  setEntries]  = useState({});
-  const [saving,   setSaving]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-
-  // Load any already-saved data for this period whenever period changes
+  // Load fitness + coach notes together
   useEffect(() => {
     if (!allPlayers.length) return;
     setLoading(true);
-    sb.from("fitness_tests")
-      .select("*")
-      .in("player_id", allPlayers.map(p => p.id))
-      .eq("period", period)
-      .then(({ data }) => {
-        const map = {};
-        allPlayers.forEach(p => { map[p.id] = { finish: "", lap: "", notes: "" }; });
-        data?.forEach(r => {
-          map[r.player_id] = {
-            finish: r.finish_time ? fmtTime(r.finish_time) : "",
-            lap:    r.lap_time    ? fmtTime(r.lap_time)    : "",
-            notes:  r.notes || "",
-          };
-        });
-        setEntries(map);
-        setLoading(false);
+    const ids = allPlayers.map(p => p.id);
+    Promise.all([
+      sb.from("fitness_tests").select("*").in("player_id", ids).eq("period", period),
+      sb.from("coach_notes").select("*").in("player_id", ids),
+    ]).then(([{ data: ft }, { data: cn }]) => {
+      // Seed entries
+      const eMap = {};
+      allPlayers.forEach(p => { eMap[p.id] = { finish: "", lap: "", notes: "" }; });
+      ft?.forEach(r => {
+        eMap[r.player_id] = {
+          finish: r.finish_time ? fmtTime(r.finish_time) : "",
+          lap:    r.lap_time    ? fmtTime(r.lap_time)    : "",
+          notes:  r.notes || "",
+        };
       });
-  }, [period, allPlayers]);
+      setEntries(eMap);
 
-  function setField(playerId, field, value) {
-    setEntries(e => ({ ...e, [playerId]: { ...e[playerId], [field]: value } }));
+      // Seed coach notes
+      const cMap = {};
+      allPlayers.forEach(p => {
+        cMap[p.id] = {
+          football: { myNote: "", saved: [] },
+          hurling:  { myNote: "", saved: [] },
+        };
+      });
+      cn?.forEach(r => {
+        if (!cMap[r.player_id]) return;
+        const sport = r.sport;
+        cMap[r.player_id][sport].saved.push(r);
+        if (r.coach_email === coachEmail) cMap[r.player_id][sport].myNote = r.note || "";
+      });
+      setCnotes(cMap);
+      setLoading(false);
+    });
+  }, [period, allPlayers, coachEmail]);
+
+  function setField(pid, field, val) {
+    setEntries(e => ({ ...e, [pid]: { ...e[pid], [field]: val } }));
+  }
+  function setCnoteField(pid, sport, val) {
+    setCnotes(c => ({ ...c, [pid]: { ...c[pid], [sport]: { ...c[pid][sport], myNote: val } } }));
+  }
+  function toggleAccordion(pid, sport) {
+    const key = pid + sport;
+    setOpen(o => ({ ...o, [key]: !o[key] }));
   }
 
-  async function saveAll() {
-    setSaving(true);
-    const rows = allPlayers
-      .map(p => {
-        const e = entries[p.id] || {};
-        const finishSecs = parseTime(e.finish);
-        const lapSecs    = parseTime(e.lap);
-        return { player_id: p.id, period, test_date: testDate,
-                 finish_time: finishSecs, lap_time: lapSecs,
-                 notes: e.notes?.trim() || null,
-                 updated_at: new Date().toISOString() };
-      })
-      .filter(r => r.finish_time !== null || r.lap_time !== null || r.notes);
-
-    let errored = 0;
+  // Save all fitness times
+  async function saveAllTimes() {
+    setSaving(s => ({ ...s, _times: true }));
+    const rows = allPlayers.map(p => {
+      const e = entries[p.id] || {};
+      return {
+        player_id: p.id, period, test_date: testDate,
+        finish_time: parseTime(e.finish), lap_time: parseTime(e.lap),
+        notes: e.notes?.trim() || null, updated_at: new Date().toISOString(),
+      };
+    }).filter(r => r.finish_time || r.lap_time || r.notes);
+    let errs = 0;
     for (const row of rows) {
-      const { error } = await sb.from("fitness_tests")
-        .upsert(row, { onConflict: "player_id,period" });
-      if (error) errored++;
+      const { error } = await sb.from("fitness_tests").upsert(row, { onConflict: "player_id,period" });
+      if (error) errs++;
     }
-    setSaving(false);
-    if (errored) showToast(`⚠️ ${errored} record(s) failed to save`);
-    else { showToast(`✅ ${rows.length} result(s) saved!`); setView("results"); }
+    setSaving(s => ({ ...s, _times: false }));
+    errs ? showToast(`⚠️ ${errs} failed`) : showToast(`✅ ${rows.length} results saved!`);
   }
 
+  // Save one coach note
+  async function saveNote(pid, sport) {
+    const key = pid + sport;
+    const val = cnotes[pid]?.[sport]?.myNote?.trim();
+    setSaving(s => ({ ...s, [key]: true }));
+    const payload = {
+      player_id: pid, sport, coach_email: coachEmail,
+      session_date: testDate, note: val || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await sb.from("coach_notes").upsert(payload, { onConflict: "player_id,sport,coach_email" });
+    setSaving(s => ({ ...s, [key]: false }));
+    if (error) { showToast("❌ Save failed"); return; }
+    showToast("✅ Note saved!");
+    setCnotes(c => {
+      const existing = c[pid][sport].saved.filter(s => s.coach_email !== coachEmail);
+      return { ...c, [pid]: { ...c[pid], [sport]: { ...c[pid][sport], saved: [...existing, payload] } } };
+    });
+  }
+
+  const coachName = email => ({ "e.t.archbold@gmail.com": "Elaine", "seangallagher2506@gmail.com": "Sean", "dodplumbing@gmail.com": "Coach 3" }[email] || email.split("@")[0]);
+  const coachColor = email => ({ "e.t.archbold@gmail.com": "#1565c0", "seangallagher2506@gmail.com": "#2e7d32", "dodplumbing@gmail.com": "#6a1b9a" }[email] || "#666");
   const filledCount = Object.values(entries).filter(e => parseTime(e.finish) || parseTime(e.lap)).length;
 
   return (
-    <div style={{marginTop:24}}>
-      <div className="section-title">🏃 FITNESS TESTING</div>
-      <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
-        Record a finish time and coaching notes for each player. All boys run together — just type
-        in their times as they finish, then save the whole group at once.
-      </div>
-
-      {/* ── Controls bar ── */}
+    <div>
+      {/* Period + date controls */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <div>
           <label className="lbl">Test Period</label>
-          <select className="inp" value={period} onChange={e=>setPeriod(e.target.value)}>
+          <select className="inp" value={period} onChange={e => setPeriod(e.target.value)}>
             <option value="pre">🌱 Pre-Summer (Jun)</option>
             <option value="post">🏆 Post-Summer (Aug)</option>
           </select>
         </div>
         <div>
-          <label className="lbl">Test Date</label>
-          <input className="inp" type="date" value={testDate}
-            onChange={e=>setTestDate(e.target.value)} />
+          <label className="lbl">Session Date</label>
+          <input className="inp" type="date" value={testDate} onChange={e => setTestDate(e.target.value)} />
         </div>
       </div>
 
-      {/* ── View toggle ── */}
+      {/* View toggle */}
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {["entry","results"].map(v => (
           <button key={v} className="btn btn-sm"
             style={{background: view===v ? "var(--primary)" : "transparent",
                     color: view===v ? "#fff" : "var(--mid)",
-                    border: `1px solid ${view===v ? "var(--primary)" : "#ddd"}`}}
-            onClick={()=>setView(v)}>
+                    border:`1px solid ${view===v ? "var(--primary)" : "#ddd"}`}}
+            onClick={() => setView(v)}>
             {v === "entry" ? "✏️ Enter Times" : "📊 Results Table"}
           </button>
         ))}
@@ -1075,64 +1087,138 @@ function FitnessTestingSection({ allPlayers, showToast }) {
       {/* ── ENTRY VIEW ── */}
       {!loading && view === "entry" && (
         <>
-          <div style={{fontSize:11,color:"var(--muted)",marginBottom:10}}>
-            Type times as <strong>m:ss</strong> (e.g. <strong>4:32</strong>) or plain seconds. Notes are optional.
-          </div>
-
-          {/* Header row */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr",gap:8,
-                       padding:"6px 10px",background:"#f5f5f5",borderRadius:8,
-                       marginBottom:6,fontSize:11,fontWeight:700,
-                       color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
-            <div>Player</div>
-            <div style={{textAlign:"center"}}>Finish</div>
-            <div style={{textAlign:"center"}}>Lap</div>
-            <div>Coach Notes</div>
+          <div style={{fontSize:11,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
+            Type times as <strong>m:ss</strong> (e.g. 4:32). Click ⚽ or 🏑 on any player to add coaching notes.
           </div>
 
           {allPlayers.map((p, i) => {
-            const e = entries[p.id] || { finish:"", lap:"", notes:"" };
+            const e  = entries[p.id]  || { finish:"", lap:"", notes:"" };
+            const cn = cnotes[p.id]   || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
             const finishValid = e.finish ? parseTime(e.finish) !== null : true;
             const lapValid    = e.lap    ? parseTime(e.lap)    !== null : true;
+            const ftOpen = open[p.id+"football"];
+            const huOpen = open[p.id+"hurling"];
+
+            // Count existing notes for badge
+            const ftNotes = cn.football.saved.filter(s => s.note);
+            const huNotes = cn.hurling.saved.filter(s => s.note);
+
             return (
-              <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr",gap:8,
-                                      alignItems:"center",padding:"6px 4px",
-                                      borderBottom: i < allPlayers.length-1 ? "1px solid #f0f0f0" : "none"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--dark)",
-                             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {p.name}
+              <div key={p.id} style={{
+                background:"#fff", border:"1px solid #ebebeb", borderRadius:12,
+                marginBottom:8, overflow:"hidden",
+                boxShadow: i===0 ? "none" : "none",
+              }}>
+                {/* ── Times row ── */}
+                <div style={{display:"grid", gridTemplateColumns:"1fr 76px 76px",
+                             gap:8, padding:"10px 12px", alignItems:"center"}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--dark)"}}>
+                    {p.name}
+                  </div>
+                  <div>
+                    <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
+                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Finish</div>
+                    <input className="inp" placeholder="m:ss" value={e.finish}
+                      onChange={ev => setField(p.id,"finish",ev.target.value)}
+                      style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
+                              borderColor: !finishValid ? "#e53935" : undefined,
+                              color: parseTime(e.finish) ? "var(--primary)" : "inherit"}} />
+                  </div>
+                  <div>
+                    <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
+                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap</div>
+                    <input className="inp" placeholder="m:ss" value={e.lap}
+                      onChange={ev => setField(p.id,"lap",ev.target.value)}
+                      style={{textAlign:"center",padding:"5px 4px",fontSize:13,
+                              borderColor: !lapValid ? "#e53935" : undefined,
+                              color: parseTime(e.lap) ? "#2e7d32" : "inherit"}} />
+                  </div>
                 </div>
-                <input className="inp" placeholder="m:ss" value={e.finish}
-                  onChange={ev => setField(p.id, "finish", ev.target.value)}
-                  style={{textAlign:"center",padding:"6px 4px",fontSize:13,fontWeight:700,
-                          borderColor: !finishValid ? "#e53935" : undefined,
-                          color: parseTime(e.finish) ? "var(--primary)" : "inherit"}} />
-                <input className="inp" placeholder="m:ss" value={e.lap}
-                  onChange={ev => setField(p.id, "lap", ev.target.value)}
-                  style={{textAlign:"center",padding:"6px 4px",fontSize:13,
-                          borderColor: !lapValid ? "#e53935" : undefined,
-                          color: parseTime(e.lap) ? "#2e7d32" : "inherit"}} />
-                <input className="inp" placeholder="Notes…" value={e.notes}
-                  onChange={ev => setField(p.id, "notes", ev.target.value)}
-                  style={{fontSize:12,padding:"6px 8px"}} />
+
+                {/* ── Fitness notes (one-liner) ── */}
+                <div style={{padding:"0 12px 8px",display:"flex",gap:8,alignItems:"center"}}>
+                  <input className="inp" placeholder="Fitness notes…" value={e.notes}
+                    onChange={ev => setField(p.id,"notes",ev.target.value)}
+                    style={{fontSize:12,padding:"5px 8px",flex:1}} />
+                </div>
+
+                {/* ── Accordion triggers ── */}
+                <div style={{display:"flex",borderTop:"1px solid #f0f0f0"}}>
+                  {[
+                    { sport:"football", icon:"⚽", notes: ftNotes, isOpen: ftOpen },
+                    { sport:"hurling",  icon:"🏑", notes: huNotes, isOpen: huOpen },
+                  ].map(({ sport, icon, notes: sNotes, isOpen }) => (
+                    <button
+                      key={sport}
+                      onClick={() => toggleAccordion(p.id, sport)}
+                      style={{flex:1,background: isOpen ? "#f8f8f8" : "transparent",
+                              border:"none",borderRight: sport==="football" ? "1px solid #f0f0f0" : "none",
+                              padding:"8px 12px",cursor:"pointer",textAlign:"left",
+                              display:"flex",alignItems:"center",gap:6,
+                              fontSize:12,fontWeight:700,color:"var(--mid)",
+                              transition:"background 0.15s"}}>
+                      <span>{icon}</span>
+                      <span style={{textTransform:"capitalize"}}>{sport}</span>
+                      {sNotes.length > 0 && (
+                        <span style={{marginLeft:"auto",background:"var(--primary)",color:"#fff",
+                                      fontSize:10,fontWeight:900,padding:"1px 6px",
+                                      borderRadius:10,minWidth:18,textAlign:"center"}}>
+                          {sNotes.length}
+                        </span>
+                      )}
+                      <span style={{marginLeft: sNotes.length > 0 ? 0 : "auto",
+                                    fontSize:10,color:"#bbb"}}>{isOpen ? "▲" : "▼"}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Football accordion body ── */}
+                {ftOpen && (
+                  <div style={{padding:"10px 12px",background:"#fafafa",
+                               borderTop:"1px solid #f0f0f0"}}>
+                    <NoteAccordionBody
+                      pid={p.id} sport="football"
+                      cn={cn.football} coachEmail={coachEmail}
+                      coachName={coachName} coachColor={coachColor}
+                      onChange={val => setCnoteField(p.id,"football",val)}
+                      onSave={() => saveNote(p.id,"football")}
+                      saving={!!saving[p.id+"football"]}
+                    />
+                  </div>
+                )}
+
+                {/* ── Hurling accordion body ── */}
+                {huOpen && (
+                  <div style={{padding:"10px 12px",background:"#fafafa",
+                               borderTop:"1px solid #f0f0f0"}}>
+                    <NoteAccordionBody
+                      pid={p.id} sport="hurling"
+                      cn={cn.hurling} coachEmail={coachEmail}
+                      coachName={coachName} coachColor={coachColor}
+                      onChange={val => setCnoteField(p.id,"hurling",val)}
+                      onSave={() => saveNote(p.id,"hurling")}
+                      saving={!!saving[p.id+"hurling"]}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
 
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                       marginTop:16,gap:12}}>
+                       marginTop:8,gap:12}}>
             <div style={{fontSize:12,color:"var(--muted)"}}>
-              {filledCount} of {allPlayers.length} players timed
+              {filledCount} of {allPlayers.length} timed
             </div>
-            <button className="btn btn-green" onClick={saveAll} disabled={saving || filledCount === 0}
-              style={{minWidth:160}}>
-              {saving ? "Saving…" : `💾 Save ${period==="pre"?"Pre":"Post"}-Summer Results`}
+            <button className="btn btn-green" onClick={saveAllTimes}
+              disabled={saving._times || filledCount === 0} style={{minWidth:160}}>
+              {saving._times ? "Saving…" : `💾 Save ${period==="pre"?"Pre":"Post"}-Summer Times`}
             </button>
           </div>
         </>
       )}
 
-      {/* ── RESULTS TABLE VIEW ── */}
+      {/* ── RESULTS VIEW ── */}
       {!loading && view === "results" && (
         <ResultsTable allPlayers={allPlayers} period={period} />
       )}
@@ -1140,69 +1226,98 @@ function FitnessTestingSection({ allPlayers, showToast }) {
   );
 }
 
+// ── NoteAccordionBody ─────────────────────────────────────────────────────────
+// Renders inside an open accordion: other coaches' saved notes + my editable note.
+function NoteAccordionBody({ pid, sport, cn, coachEmail, coachName, coachColor, onChange, onSave, saving }) {
+  const otherNotes = cn.saved.filter(s => s.coach_email !== coachEmail && s.note);
+  return (
+    <div>
+      {otherNotes.length > 0 && (
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+          {otherNotes.map(s => (
+            <div key={s.coach_email} style={{
+              background:"#fff",borderRadius:6,padding:"6px 10px",
+              fontSize:12,lineHeight:1.5,
+              borderLeft:`3px solid ${coachColor(s.coach_email)}`
+            }}>
+              <span style={{fontWeight:700,fontSize:11,textTransform:"uppercase",
+                            letterSpacing:"0.05em",color:coachColor(s.coach_email)}}>
+                {coachName(s.coach_email)}:&nbsp;
+              </span>
+              {s.note}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",
+                   color:coachColor(coachEmail),marginBottom:4}}>
+        {coachName(coachEmail)} (you)
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+        <textarea className="inp"
+          placeholder={`Your ${sport} note…`}
+          value={cn.myNote}
+          onChange={e => onChange(e.target.value)}
+          rows={2}
+          style={{flex:1,resize:"vertical",fontSize:12,padding:"7px 10px"}}
+        />
+        <button className="btn btn-sm btn-green" onClick={onSave}
+          disabled={saving} style={{marginTop:0,flexShrink:0,minWidth:54}}>
+          {saving ? "…" : "Save"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── ResultsTable ──────────────────────────────────────────────────────────────
-// Ranked table showing pre, post, and improvement for every player.
 function ResultsTable({ allPlayers, period }) {
-  const [allTests, setAllTests] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showPeriod, setShowPeriod] = useState(period); // which period to rank by
+  const [allTests,    setAllTests]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showPeriod,  setShowPeriod]  = useState(period);
 
   useEffect(() => {
     if (!allPlayers.length) return;
-    sb.from("fitness_tests")
-      .select("*")
+    sb.from("fitness_tests").select("*")
       .in("player_id", allPlayers.map(p => p.id))
       .then(({ data }) => { setAllTests(data || []); setLoading(false); });
   }, [allPlayers]);
 
   if (loading) return <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>;
 
-  // Build per-player map
   const playerMap = {};
   allPlayers.forEach(p => { playerMap[p.id] = { name: p.name, pre: null, post: null }; });
-  allTests.forEach(t => {
-    if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t;
-  });
+  allTests.forEach(t => { if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t; });
 
-  // Sort by selected period finish_time (nulls last)
   const rows = Object.values(playerMap).sort((a, b) => {
-    const ta = a[showPeriod]?.finish_time;
-    const tb = b[showPeriod]?.finish_time;
-    if (!ta && !tb) return 0;
-    if (!ta) return 1;
-    if (!tb) return -1;
+    const ta = a[showPeriod]?.finish_time, tb = b[showPeriod]?.finish_time;
+    if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1;
     return ta - tb;
   });
 
-  const hasAnyPost = rows.some(r => r.post?.finish_time);
-  const medalColors = ["#f5c842","#b0b0b0","#cd7f32"];
+  const hasAnyPost   = rows.some(r => r.post?.finish_time);
+  const medalColors  = ["#f5c842","#b0b0b0","#cd7f32"];
 
   return (
     <div>
-      {/* Period toggle for ranking */}
       <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
-        <span style={{fontSize:11,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",
-                      letterSpacing:"0.06em"}}>Rank by:</span>
+        <span style={{fontSize:11,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Rank by:</span>
         {["pre","post"].map(p => (
           <button key={p} className="btn btn-sm"
             style={{background: showPeriod===p ? "var(--primary)" : "transparent",
                     color: showPeriod===p ? "#fff" : "var(--mid)",
                     border:`1px solid ${showPeriod===p ? "var(--primary)" : "#ddd"}`}}
-            onClick={()=>setShowPeriod(p)}>
-            {p === "pre" ? "🌱 Pre-Summer" : "🏆 Post-Summer"}
+            onClick={() => setShowPeriod(p)}>
+            {p === "pre" ? "🌱 Pre" : "🏆 Post"}
           </button>
         ))}
       </div>
 
-      {/* Table header */}
       <div style={{display:"grid",
                    gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
-                   gap:6, padding:"7px 10px",
-                   background:"#f5f5f5", borderRadius:"8px 8px 0 0",
-                   fontSize:11, fontWeight:700, color:"var(--mid)",
-                   textTransform:"uppercase", letterSpacing:"0.06em"}}>
-        <div>#</div>
-        <div>Player</div>
+                   gap:6,padding:"7px 10px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",
+                   fontSize:11,fontWeight:700,color:"var(--mid)",textTransform:"uppercase",letterSpacing:"0.06em"}}>
+        <div>#</div><div>Player</div>
         <div style={{textAlign:"center"}}>Finish Pre</div>
         <div style={{textAlign:"center"}}>Lap Pre</div>
         {hasAnyPost && <div style={{textAlign:"center"}}>Finish Post</div>}
@@ -1210,92 +1325,65 @@ function ResultsTable({ allPlayers, period }) {
       </div>
 
       {rows.map((r, i) => {
-        const preFin   = r.pre?.finish_time ?? null;
-        const postFin  = r.post?.finish_time ?? null;
-        const preLap   = r.pre?.lap_time    ?? null;
-        const postLap  = r.post?.lap_time   ?? null;
-        const diff     = (preFin && postFin) ? postFin - preFin : null;
+        const preFin  = r.pre?.finish_time  ?? null;
+        const postFin = r.post?.finish_time ?? null;
+        const preLap  = r.pre?.lap_time     ?? null;
+        const postLap = r.post?.lap_time    ?? null;
+        const diff    = preFin && postFin ? postFin - preFin : null;
         const improved = diff !== null && diff < 0;
-        const slower   = diff !== null && diff > 0;
-        const preNotes  = r.pre?.notes;
-        const postNotes = r.post?.notes;
+        const preNotes = r.pre?.notes, postNotes = r.post?.notes;
 
         return (
           <div key={r.name}>
             <div style={{display:"grid",
                          gridTemplateColumns: hasAnyPost ? "28px 1fr 60px 60px 60px 60px" : "28px 1fr 60px 60px",
-                         gap:6, padding:"9px 10px",
-                         background: i % 2 === 0 ? "#fff" : "#fafafa",
-                         borderBottom:"1px solid #f0f0f0",
-                         alignItems:"center"}}>
-              <div style={{fontSize: i < 3 ? 16 : 12, textAlign:"center",
-                           color: i < 3 ? medalColors[i] : "#ccc", fontWeight:900}}>
-                {i < 3 ? ["🥇","🥈","🥉"][i] : i+1}
+                         gap:6,padding:"9px 10px",alignItems:"center",
+                         background: i%2===0 ? "#fff" : "#fafafa",
+                         borderBottom:"1px solid #f0f0f0"}}>
+              <div style={{fontSize:i<3?16:12,textAlign:"center",color:i<3?medalColors[i]:"#ccc",fontWeight:900}}>
+                {i<3?["🥇","🥈","🥉"][i]:i+1}
               </div>
-              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",
-                           textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                {r.name}
-              </div>
-              <div style={{textAlign:"center",fontSize:12,
-                           color: showPeriod==="pre" ? "var(--primary)" : "var(--mid)",
-                           fontWeight: showPeriod==="pre" ? 700 : 400}}>
+              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+              <div style={{textAlign:"center",fontSize:12,color:showPeriod==="pre"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="pre"?700:400}}>
                 {preFin ? fmtTime(preFin) : <span style={{color:"#ddd"}}>—</span>}
               </div>
               <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
                 {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
               </div>
-              {hasAnyPost && (
-                <div style={{textAlign:"center",fontSize:12,
-                             color: showPeriod==="post" ? "var(--primary)" : "var(--mid)",
-                             fontWeight: showPeriod==="post" ? 700 : 400}}>
-                  {postFin ? fmtTime(postFin) : <span style={{color:"#ddd"}}>—</span>}
-                </div>
-              )}
-              {hasAnyPost && (
-                <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
-                  {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
-                </div>
-              )}
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,color:showPeriod==="post"?"var(--primary)":"var(--mid)",fontWeight:showPeriod==="post"?700:400}}>
+                {postFin ? fmtTime(postFin) : <span style={{color:"#ddd"}}>—</span>}
+              </div>}
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,color:"#555"}}>
+                {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
+              </div>}
             </div>
-            {(preNotes || postNotes) && (
-              <div style={{padding:"4px 10px 8px 44px",background: i%2===0?"#fff":"#fafafa",
+            {(preNotes||postNotes) && (
+              <div style={{padding:"4px 10px 8px 44px",background:i%2===0?"#fff":"#fafafa",
                            borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
-                {preNotes && (
-                  <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
-                    <span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}
-                  </div>
-                )}
-                {postNotes && (
-                  <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}>
-                    <span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}
-                  </div>
-                )}
+                {preNotes  && <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}</div>}
+                {postNotes && <div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}</div>}
               </div>
             )}
           </div>
         );
       })}
 
-      {/* Squad summary */}
       {(() => {
         const timed = rows.filter(r => r[showPeriod]?.finish_time);
         if (!timed.length) return null;
         const times = timed.map(r => r[showPeriod].finish_time);
         const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
-        const best = Math.min(...times);
         const improved = rows.filter(r => r.pre?.finish_time && r.post?.finish_time && r.post.finish_time < r.pre.finish_time);
         return (
           <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
-            {[
-              {label:"Squad avg", val:fmtTime(avg), color:"var(--primary)"},
-              {label:"Fastest", val:fmtTime(best), color:"#2e7d32"},
-              ...(improved.length ? [{label:"Improved", val:`${improved.length} boys`, color:"#2e7d32"}] : []),
-            ].map(stat => (
-              <div key={stat.label} style={{flex:1,minWidth:90,background:"#f9f9f9",
-                    border:"1px solid #eee",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+            {[{label:"Squad avg",val:fmtTime(avg),color:"var(--primary)"},
+              {label:"Fastest",val:fmtTime(Math.min(...times)),color:"#2e7d32"},
+              ...(improved.length?[{label:"Improved",val:`${improved.length} boys`,color:"#2e7d32"}]:[])
+            ].map(stat=>(
+              <div key={stat.label} style={{flex:1,minWidth:90,background:"#f9f9f9",border:"1px solid #eee",
+                    borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
                 <div style={{fontSize:18,fontWeight:900,color:stat.color}}>{stat.val}</div>
-                <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",
-                             letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
+                <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -1305,169 +1393,7 @@ function ResultsTable({ allPlayers, period }) {
   );
 }
 
-// ── CoachNotesTab ─────────────────────────────────────────────────────────────
-// Each coach (identified by email) can add one note per player per sport.
-// All coaches' notes are visible to everyone with admin access.
-function CoachNotesTab({ sport, label, allPlayers, coachEmail, showToast }) {
-  // notes[playerId] = { myNote: "", saved: [ {coach_email, note, updated_at}, ... ] }
-  const [notes,   setNotes]   = useState({});
-  const [saving,  setSaving]  = useState({});
-  const [loading, setLoading] = useState(true);
-  const [session, setSessionDate] = useState(new Date().toISOString().slice(0,10));
 
-  useEffect(() => {
-    if (!allPlayers.length) return;
-    sb.from("coach_notes")
-      .select("*")
-      .eq("sport", sport)
-      .in("player_id", allPlayers.map(p => p.id))
-      .then(({ data }) => {
-        const map = {};
-        allPlayers.forEach(p => { map[p.id] = { myNote: "", saved: [] }; });
-        // Group by player_id
-        data?.forEach(r => {
-          if (!map[r.player_id]) map[r.player_id] = { myNote: "", saved: [] };
-          map[r.player_id].saved.push(r);
-          // Pre-fill this coach's own note
-          if (r.coach_email === coachEmail) map[r.player_id].myNote = r.note || "";
-        });
-        setNotes(map);
-        setLoading(false);
-      });
-  }, [sport, allPlayers, coachEmail]);
-
-  function setMyNote(playerId, val) {
-    setNotes(n => ({ ...n, [playerId]: { ...n[playerId], myNote: val } }));
-  }
-
-  async function saveNote(playerId) {
-    const val = notes[playerId]?.myNote?.trim();
-    setSaving(s => ({ ...s, [playerId]: true }));
-    const payload = {
-      player_id:   playerId,
-      sport,
-      coach_email: coachEmail,
-      note:        val || null,
-      session_date: session,
-      updated_at:  new Date().toISOString(),
-    };
-    const { error } = await sb.from("coach_notes")
-      .upsert(payload, { onConflict: "player_id,sport,coach_email" });
-    setSaving(s => ({ ...s, [playerId]: false }));
-    if (error) { showToast("❌ Save failed"); return; }
-    showToast("✅ Note saved!");
-    // Update local saved list
-    setNotes(n => {
-      const existing = n[playerId].saved.filter(s => s.coach_email !== coachEmail);
-      return { ...n, [playerId]: { ...n[playerId], saved: [...existing, payload] } };
-    });
-  }
-
-  // Friendly coach label from email
-  function coachName(email) {
-    const names = {
-      "e.t.archbold@gmail.com":    "Elaine",
-      "seangallagher2506@gmail.com": "Sean",
-      "dodplumbing@gmail.com":     "Coach 3",
-    };
-    return names[email] || email.split("@")[0];
-  }
-
-  const coachColors = {
-    "e.t.archbold@gmail.com":      "#1565c0",
-    "seangallagher2506@gmail.com": "#2e7d32",
-    "dodplumbing@gmail.com":       "#6a1b9a",
-  };
-
-  return (
-    <div className="admin-wrap">
-      <div className="admin-banner">
-        <div style={{fontSize:28}}>{sport === "football" ? "⚽" : "🏑"}</div>
-        <div>
-          <h2>{label.toUpperCase()} NOTES</h2>
-          <p>Per-player coaching notes · visible to all coaches</p>
-        </div>
-      </div>
-
-      <div style={{marginBottom:14}}>
-        <label className="lbl">Session Date</label>
-        <input className="inp" type="date" value={session}
-          onChange={e => setSessionDate(e.target.value)} style={{maxWidth:180}} />
-      </div>
-
-      {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>}
-
-      {!loading && allPlayers.map((p, i) => {
-        const n = notes[p.id] || { myNote: "", saved: [] };
-        // Other coaches' notes (not mine)
-        const otherNotes = n.saved.filter(s => s.coach_email !== coachEmail && s.note);
-
-        return (
-          <div key={p.id} style={{
-            background: i%2===0 ? "#fff" : "#fafafa",
-            border:"1px solid #efefef", borderRadius:10,
-            padding:"12px 14px", marginBottom:8
-          }}>
-            {/* Player name */}
-            <div style={{fontWeight:700,fontSize:14,color:"var(--dark)",marginBottom:8}}>
-              {p.name}
-            </div>
-
-            {/* Other coaches' notes (read-only) */}
-            {otherNotes.length > 0 && (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
-                {otherNotes.map(s => (
-                  <div key={s.coach_email} style={{
-                    background:"#f5f5f5", borderRadius:6,
-                    padding:"6px 10px", fontSize:12, lineHeight:1.5,
-                    borderLeft: `3px solid ${coachColors[s.coach_email] || "#999"}`
-                  }}>
-                    <span style={{
-                      fontWeight:700, fontSize:11,
-                      color: coachColors[s.coach_email] || "#666",
-                      textTransform:"uppercase", letterSpacing:"0.05em"
-                    }}>
-                      {coachName(s.coach_email)}:&nbsp;
-                    </span>
-                    {s.note}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* My note input */}
-            <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:10,fontWeight:700,color: coachColors[coachEmail]||"var(--mid)",
-                             textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
-                  {coachName(coachEmail)} (you)
-                </div>
-                <textarea
-                  className="inp"
-                  placeholder={`Your ${sport} note for ${p.name}…`}
-                  value={n.myNote}
-                  onChange={e => setMyNote(p.id, e.target.value)}
-                  rows={2}
-                  style={{resize:"vertical",fontSize:12,padding:"7px 10px"}}
-                />
-              </div>
-              <button
-                className="btn btn-sm btn-green"
-                onClick={() => saveNote(p.id)}
-                disabled={saving[p.id]}
-                style={{marginTop:20,flexShrink:0,minWidth:60}}
-              >
-                {saving[p.id] ? "…" : "Save"}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Admin Tab ─────────────────────────────────────────────────────────────────
 function AdminTab({ allPlayers, onRefresh, showToast }) {
   const [newName, setNewName]         = useState("");
   const [adding, setAdding]           = useState(false);
