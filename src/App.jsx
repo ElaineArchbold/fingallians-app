@@ -1008,49 +1008,51 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     setOpen(o => ({ ...o, [key]: !o[key] }));
   }
 
-  // Save everything for one player — lap time, fitness notes, and both sport notes
-  async function savePlayer(pid) {
-    setSaving(s => ({ ...s, [pid]: true }));
-    const e   = entries[pid] || {};
-    const cn  = cnotes[pid]  || {};
-    let errs  = 0;
+  // Save everything — lap times, fitness notes, and sport notes for all players
+  async function saveAll() {
+    setSaving(s => ({ ...s, _all: true }));
+    let errs = 0;
 
-    // 1. Upsert fitness_tests row
-    const fitnessRow = {
-      player_id: pid, period, test_date: testDate,
-      lap_time:  parseTime(e.lap),
-      notes:     e.notes?.trim() || null,
-      updated_at: new Date().toISOString(),
-    };
-    if (fitnessRow.lap_time || fitnessRow.notes) {
-      const { error } = await sb.from("fitness_tests")
-        .upsert(fitnessRow, { onConflict: "player_id,period" });
-      if (error) errs++;
-    }
+    for (const p of allPlayers) {
+      const e  = entries[p.id] || {};
+      const cn = cnotes[p.id]  || {};
 
-    // 2. Upsert coach_notes for each sport
-    for (const sport of ["football", "hurling"]) {
-      const note = cn[sport]?.myNote?.trim();
-      if (note === undefined) continue;
-      const payload = {
-        player_id: pid, sport, coach_email: coachEmail,
-        session_date: testDate, note: note || null,
+      // fitness_tests row
+      const fitnessRow = {
+        player_id: p.id, period, test_date: testDate,
+        lap_time:  parseTime(e.lap),
+        notes:     e.notes?.trim() || null,
         updated_at: new Date().toISOString(),
       };
-      const { error } = await sb.from("coach_notes")
-        .upsert(payload, { onConflict: "player_id,sport,coach_email" });
-      if (error) errs++;
-      else {
-        // Refresh local saved list for this sport
-        setCnotes(c => {
-          const existing = (c[pid]?.[sport]?.saved || []).filter(s => s.coach_email !== coachEmail);
-          return { ...c, [pid]: { ...c[pid], [sport]: { ...c[pid][sport], saved: [...existing, payload] } } };
-        });
+      if (fitnessRow.lap_time || fitnessRow.notes) {
+        const { error } = await sb.from("fitness_tests")
+          .upsert(fitnessRow, { onConflict: "player_id,period" });
+        if (error) errs++;
+      }
+
+      // coach_notes for each sport
+      for (const sport of ["football","hurling"]) {
+        const note = cn[sport]?.myNote?.trim();
+        if (!note) continue;
+        const payload = {
+          player_id: p.id, sport, coach_email: coachEmail,
+          session_date: testDate, note,
+          updated_at: new Date().toISOString(),
+        };
+        const { error } = await sb.from("coach_notes")
+          .upsert(payload, { onConflict: "player_id,sport,coach_email" });
+        if (error) errs++;
+        else {
+          setCnotes(c => {
+            const existing = (c[p.id]?.[sport]?.saved||[]).filter(s => s.coach_email !== coachEmail);
+            return { ...c, [p.id]: { ...c[p.id], [sport]: { ...c[p.id][sport], saved: [...existing, payload] } } };
+          });
+        }
       }
     }
 
-    setSaving(s => ({ ...s, [pid]: false }));
-    errs ? showToast(`⚠️ Some fields failed to save`) : showToast(`✅ ${allPlayers.find(p=>p.id===pid)?.name} saved!`);
+    setSaving(s => ({ ...s, _all: false }));
+    errs ? showToast(`⚠️ Some records failed to save`) : showToast(`✅ All saved!`);
   }
 
   const coachName = email => ({ "e.t.archbold@gmail.com": "Elaine", "seangallagher2506@gmail.com": "Sean", "dodplumbing@gmail.com": "Coach 3" }[email] || email.split("@")[0]);
@@ -1074,21 +1076,16 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
         </div>
       </div>
 
-      {/* View toggle */}
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["entry","results"].map(v => (
-          <button key={v}
-            onClick={() => setView(v)}
-            style={{
-              padding:"7px 16px", borderRadius:8, cursor:"pointer",
-              fontFamily:"inherit", fontSize:14, fontWeight:700,
-              background: view===v ? "var(--primary)" : "#e0e0e0",
-              color:      view===v ? "#fff"           : "#111",
-              border:     view===v ? "2px solid var(--primary)" : "2px solid #bbb",
-              transition:"all 0.15s",
-            }}>
-            {v === "entry" ? "✏️ Enter Times" : "📊 Results Table"}
-          </button>
+      {/* View toggle — tab style */}
+      <div style={{display:"flex",borderRadius:10,overflow:"hidden",border:"2px solid var(--primary)",marginBottom:16,width:"100%"}}>
+        {[["entry","✏️ Enter Times"],["results","📊 Results Table"]].map(([v,label]) => (
+          <button key={v} onClick={() => setView(v)} style={{
+            flex:1, padding:"10px 8px", border:"none", cursor:"pointer",
+            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            background: view===v ? "var(--primary)" : "#fff",
+            color:      view===v ? "#fff" : "var(--primary)",
+            transition:"all 0.15s",
+          }}>{label}</button>
         ))}
       </div>
 
@@ -1098,129 +1095,99 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       {!loading && view === "entry" && (
         <>
           <div style={{fontSize:11,color:"var(--muted)",marginBottom:10,lineHeight:1.6}}>
-            Type lap times as <strong>m:ss</strong> (e.g. 4:32). Click ⚽ or 🏑 to add coaching notes. Hit Save when done with each player.
+            Type lap times as <strong>m:ss</strong> (e.g. 4:32). Click <strong>Notes ▼</strong> on any player to add coaching notes. Hit Save All when done.
           </div>
 
           {/* Search bar */}
-          <input
-            className="inp"
-            placeholder="🔍  Search player…"
-            value={search}
+          <input className="inp" placeholder="🔍  Search player…" value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{marginBottom:12,fontSize:13,padding:"8px 12px"}}
-          />
+            style={{marginBottom:12,fontSize:13,padding:"8px 12px"}} />
 
-          {allPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p, i) => {
-            const e  = entries[p.id]  || { lap:"", notes:"" };
-            const cn = cnotes[p.id]   || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
-            const lapValid = e.lap ? parseTime(e.lap) !== null : true;
-            const ftOpen = open[p.id+"football"];
-            const huOpen = open[p.id+"hurling"];
-            const ftNotes = cn.football.saved.filter(s => s.note);
-            const huNotes = cn.hurling.saved.filter(s => s.note);
+          {allPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p) => {
+            const e   = entries[p.id] || { lap:"", notes:"" };
+            const cn  = cnotes[p.id]  || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
+            const lapValid  = e.lap ? parseTime(e.lap) !== null : true;
+            const notesOpen = !!open[p.id];
+            const hasNotes  = cn.football.saved.filter(s=>s.note).length + cn.hurling.saved.filter(s=>s.note).length;
 
             return (
-              <div key={p.id} style={{
-                background:"#fff", border:"1px solid #ebebeb", borderRadius:12,
-                marginBottom:8, overflow:"hidden",
-              }}>
-                {/* ── Lap time + name row ── */}
-                <div style={{display:"grid", gridTemplateColumns:"1fr 90px",
-                             gap:8, padding:"10px 12px", alignItems:"center"}}>
-                  <div style={{fontWeight:700,fontSize:13,color:"var(--dark)"}}>
-                    {p.name}
-                  </div>
+              <div key={p.id} style={{background:"#fff",border:"1px solid #e0e0e0",borderRadius:12,marginBottom:8,overflow:"hidden"}}>
+
+                {/* Name + lap time */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 90px",gap:8,padding:"10px 12px",alignItems:"center"}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--dark)"}}>{p.name}</div>
                   <div>
-                    <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
-                                 letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap Time</div>
+                    <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap Time</div>
                     <input className="inp" placeholder="m:ss" value={e.lap}
                       onChange={ev => setField(p.id,"lap",ev.target.value)}
                       style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
-                              borderColor: !lapValid ? "#e53935" : undefined,
-                              color: parseTime(e.lap) ? "#2e7d32" : "inherit"}} />
+                              borderColor:!lapValid?"#e53935":undefined,
+                              color:parseTime(e.lap)?"#2e7d32":"inherit"}} />
                   </div>
                 </div>
 
-                {/* ── Fitness notes ── */}
-                <div style={{padding:"0 12px 8px"}}>
-                  <input className="inp" placeholder="Fitness notes…" value={e.notes}
-                    onChange={ev => setField(p.id,"notes",ev.target.value)}
-                    style={{fontSize:12,padding:"5px 8px",width:"100%"}} />
-                </div>
-
-                {/* ── Accordion triggers ── */}
-                <div style={{display:"flex",borderTop:"1px solid #f0f0f0"}}>
-                  {[
-                    { sport:"football", icon:"⚽", notes: ftNotes, isOpen: ftOpen },
-                    { sport:"hurling",  icon:"🏑", notes: huNotes, isOpen: huOpen },
-                  ].map(({ sport, icon, notes: sNotes, isOpen }) => (
-                    <button
-                      key={sport}
-                      onClick={() => toggleAccordion(p.id, sport)}
-                      style={{flex:1,background: isOpen ? "#f0f4ff" : "transparent",
-                              border:"none",borderRight: sport==="football" ? "1px solid #f0f0f0" : "none",
-                              padding:"8px 12px",cursor:"pointer",textAlign:"left",
-                              display:"flex",alignItems:"center",gap:6,
-                              fontSize:12,fontWeight:700,color:"#333",
-                              transition:"background 0.15s"}}>
-                      <span>{icon}</span>
-                      <span style={{textTransform:"capitalize"}}>{sport}</span>
-                      {sNotes.length > 0 && (
-                        <span style={{marginLeft:"auto",background:"var(--primary)",color:"#fff",
-                                      fontSize:10,fontWeight:900,padding:"1px 6px",
-                                      borderRadius:10,minWidth:18,textAlign:"center"}}>
-                          {sNotes.length}
-                        </span>
-                      )}
-                      <span style={{marginLeft: sNotes.length > 0 ? 0 : "auto",
-                                    fontSize:10,color:"#999"}}>{isOpen ? "▲" : "▼"}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── Football accordion body ── */}
-                {ftOpen && (
-                  <div style={{padding:"10px 12px",background:"#fafafa",borderTop:"1px solid #f0f0f0"}}>
-                    <NoteAccordionBody
-                      sport="football" cn={cn.football}
-                      coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
-                      onChange={val => setCnoteField(p.id,"football",val)}
-                    />
-                  </div>
-                )}
-
-                {/* ── Hurling accordion body ── */}
-                {huOpen && (
-                  <div style={{padding:"10px 12px",background:"#fafafa",borderTop:"1px solid #f0f0f0"}}>
-                    <NoteAccordionBody
-                      sport="hurling" cn={cn.hurling}
-                      coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
-                      onChange={val => setCnoteField(p.id,"hurling",val)}
-                    />
-                  </div>
-                )}
-
-                {/* ── Single save button per player ── */}
-                <div style={{padding:"10px 12px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
-                  <button
-                    onClick={() => savePlayer(p.id)}
-                    disabled={!!saving[p.id]}
-                    style={{
-                      width:"100%", padding:"9px", borderRadius:8, border:"none",
-                      background: saving[p.id] ? "#ccc" : "var(--primary)",
-                      color:"#fff", fontWeight:700, fontSize:13,
-                      cursor: saving[p.id] ? "not-allowed" : "pointer",
-                      fontFamily:"inherit",
-                    }}>
-                    {saving[p.id] ? "Saving…" : `💾 Save ${p.name.split(" ")[0]}`}
+                {/* Notes toggle button */}
+                <div style={{borderTop:"1px solid #f0f0f0"}}>
+                  <button onClick={() => setOpen(o => ({...o, [p.id]: !o[p.id]}))}
+                    style={{width:"100%",padding:"8px 12px",border:"none",background:notesOpen?"#f0f4ff":"transparent",
+                            cursor:"pointer",display:"flex",alignItems:"center",gap:6,
+                            fontSize:12,fontWeight:700,color:"#333",fontFamily:"inherit"}}>
+                    <span>📝 Notes</span>
+                    {hasNotes > 0 && (
+                      <span style={{background:"var(--primary)",color:"#fff",fontSize:10,fontWeight:900,
+                                    padding:"1px 7px",borderRadius:10}}>{hasNotes}</span>
+                    )}
+                    <span style={{marginLeft:"auto",fontSize:11,color:"#999"}}>{notesOpen?"▲":"▼"}</span>
                   </button>
                 </div>
+
+                {/* Notes body — all three sections together */}
+                {notesOpen && (
+                  <div style={{padding:"12px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",flexDirection:"column",gap:12}}>
+
+                    {/* Fitness notes */}
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>🏃 Fitness Notes</div>
+                      <input className="inp" placeholder="e.g. Strong effort, needs to pace better…"
+                        value={e.notes}
+                        onChange={ev => setField(p.id,"notes",ev.target.value)}
+                        style={{fontSize:12,padding:"6px 8px",width:"100%"}} />
+                    </div>
+
+                    {/* Football notes */}
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>⚽ Football Notes</div>
+                      <NoteAccordionBody sport="football" cn={cn.football}
+                        coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
+                        onChange={val => setCnoteField(p.id,"football",val)} />
+                    </div>
+
+                    {/* Hurling notes */}
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>🏑 Hurling Notes</div>
+                      <NoteAccordionBody sport="hurling" cn={cn.hurling}
+                        coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
+                        onChange={val => setCnoteField(p.id,"hurling",val)} />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
 
-          <div style={{fontSize:12,color:"var(--muted)",textAlign:"center",marginTop:8}}>
-            {filledCount} of {allPlayers.length} players have a lap time recorded
+          {/* Single save button for all */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,gap:12}}>
+            <div style={{fontSize:12,color:"var(--muted)"}}>
+              {filledCount} of {allPlayers.length} players timed
+            </div>
+            <button onClick={saveAll} disabled={!!saving._all}
+              style={{padding:"11px 24px",borderRadius:8,border:"none",
+                      background:saving._all?"#ccc":"var(--primary)",
+                      color:"#fff",fontWeight:700,fontSize:14,
+                      cursor:saving._all?"not-allowed":"pointer",
+                      fontFamily:"inherit",minWidth:160}}>
+              {saving._all ? "Saving…" : `💾 Save All`}
+            </button>
           </div>
         </>
       )}
