@@ -154,8 +154,8 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .hdr-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:white;line-height:1;letter-spacing:0.03em}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px}
 .hdr-player{font-size:12px;color:var(--gold2);font-weight:700;margin-top:2px}
-.tabs{display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
-.tab-btn{flex:1;min-width:72px;padding:10px 2px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.04em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs{display:grid;gap:3px}.tabs.t3{grid-template-columns:repeat(3,1fr)}.tabs.t5{grid-template-columns:repeat(5,1fr)}
+.tab-btn{padding:10px 4px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:clamp(11px,3.2vw,15px);letter-spacing:0.03em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent;white-space:nowrap;text-align:center;width:100%}
 .tab-btn.active{background:var(--bg);color:var(--g);font-size:15px;border-bottom:3px solid var(--bg)}
 .auth-wrap{padding:24px 18px}
 .auth-hero{background:var(--g);border-radius:var(--radius);padding:30px 24px 26px;margin-bottom:18px;color:white;position:relative;overflow:hidden;text-align:center}
@@ -388,12 +388,11 @@ export default function App() {
   );
 
   const TABS = [
-    { id:"home",     label:"Home"        },
-    { id:"plan",     label:"Plan"        },
-    { id:"progress", label:"Progress"    },
-    ...(isAdmin ? [{ id:"leaderboard", label:"Results"  }] : []),
-    ...(isAdmin ? [{ id:"fitness",     label:"Testing"  }] : []),
-    ...(isAdmin ? [{ id:"admin",       label:"Admin"    }] : []),
+    { id:"home",    label:"Home"     },
+    { id:"plan",    label:"Plan"     },
+    { id:"progress",label:"Progress" },
+    ...(isAdmin ? [{ id:"coaches", label:"Coaches" }] : []),
+    ...(isAdmin ? [{ id:"admin",   label:"Admin"   }] : []),
   ];
 
   return (
@@ -410,7 +409,7 @@ export default function App() {
                 {player && <div className="hdr-player">👤 {player.name} · {pts} pts</div>}
               </div>
             </div>
-            <div className="tabs">
+            <div className={`tabs t${TABS.length}`} style={{gridTemplateColumns:`repeat(${TABS.length},1fr)`}}>
               {TABS.map(t => (
                 <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`} onClick={() => setTab(t.id)}>
                   {t.label}
@@ -440,20 +439,9 @@ export default function App() {
           </div>
         )}
 
-        {session && isAdmin && tab === "leaderboard" && (
-          <ScoresTab player={player} />
-        )}
-
-        {session && isAdmin && tab === "fitness" && (
+        {session && isAdmin && tab === "coaches" && (
           <div className="admin-wrap">
-            <div className="admin-banner">
-              <div style={{fontSize:28}}>🏃</div>
-              <div>
-                <h2>FITNESS TESTING</h2>
-                <p>Times · lap times · coach notes</p>
-              </div>
-            </div>
-            <FitnessTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
+            <CoachesTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
           </div>
         )}
 
@@ -1150,8 +1138,41 @@ function ProgressTab({ player, checks, isAdmin }) {
   );
 }
 
+// ── CoachesTab ────────────────────────────────────────────────────────────────
+// Single admin tab covering: Leaderboard, Fitness Testing, Coach Notes
+function CoachesTab({ allPlayers, coachEmail, showToast }) {
+  const [sub, setSub] = useState("leaderboard");
+
+  const subTabs = [
+    { id:"leaderboard", label:"Leaderboard" },
+    { id:"fitness",     label:"Testing"     },
+  ];
+
+  return (
+    <div>
+      {/* Sub-tab toggle */}
+      <div style={{display:"flex",borderRadius:10,overflow:"hidden",
+                   border:"2px solid #a31621",marginBottom:16}}>
+        {subTabs.map(t => (
+          <button key={t.id} onClick={() => setSub(t.id)} style={{
+            flex:1, padding:"9px 6px", border:"none", cursor:"pointer",
+            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            background: sub===t.id ? "#a31621" : "#fff",
+            color:      sub===t.id ? "#fff"    : "#a31621",
+            opacity:    sub===t.id ? 1         : 0.5,
+            transition:"all 0.15s",
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {sub === "leaderboard" && <ScoresTab />}
+      {sub === "fitness"     && <FitnessTab allPlayers={allPlayers} coachEmail={coachEmail} showToast={showToast} />}
+    </div>
+  );
+}
+
 // ── ScoresTab (Leaderboard — admin only) ──────────────────────────────────────
-function ScoresTab({ player }) {
+function ScoresTab() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
