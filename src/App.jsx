@@ -342,7 +342,7 @@ export default function App() {
           .ilike("name", mappedName)
           .maybeSingle();
         if (found) {
-          await sb.from("parent_players").insert({ user_id: session.user.id, player_id: found.id });
+          await sb.from("parent_players").upsert({ user_id: session.user.id, player_id: found.id }, { onConflict:"user_id,player_id" });
           setPlayer(found);
           const { data: comps } = await sb.from("task_completions").select("task_key").eq("player_id", found.id);
           const c = {};
@@ -365,14 +365,16 @@ export default function App() {
       await sb.from("task_completions").delete().eq("player_id", player.id).eq("task_key", taskKey);
       setChecks(c => { const n={...c}; delete n[taskKey]; return n; });
     } else {
-      await sb.from("task_completions").insert({ player_id: player.id, task_key: taskKey });
+      await sb.from("task_completions").insert({ player_id: player.id, task_key: taskKey, completed_at: new Date().toISOString() });
       setChecks(c => ({ ...c, [taskKey]: true }));
       showToast(`✅ ${label} logged! +${pts} pts`);
     }
   }
 
   async function linkPlayer(playerId) {
-    await sb.from("parent_players").insert({ user_id: session.user.id, player_id: playerId });
+    // Upsert so two parents linking the same child never causes a duplicate error
+    await sb.from("parent_players")
+      .upsert({ user_id: session.user.id, player_id: playerId }, { onConflict:"user_id,player_id" });
     await loadPlayerData();
     showToast("🎉 Player linked!");
     setTab("home");
