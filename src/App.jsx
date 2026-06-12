@@ -3,11 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlb2t1ZWNyamhrc2d0YnN4dWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTgzNTUsImV4cCI6MjA5NjQ5NDM1NX0.lZLFWeuYplFE0YdlKuLGRXfJK5eApxMxU0SRPaKaKs8";
+// Admin accounts and their pre-linked child (optional — can also link via UI)
 const ADMIN_EMAILS = [
   "e.t.archbold@gmail.com",
   "seangallagher2506@gmail.com",
   "dodplumbing@gmail.com",
 ];
+// Elaine's child — auto-linked if not already linked
+const ADMIN_PLAYER_NAME = "Rory Archbold Forde";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -365,9 +368,9 @@ export default function App() {
     { id:"home",     label:"Home"        },
     { id:"plan",     label:"Plan"        },
     { id:"progress", label:"Progress"    },
-    ...(isAdmin ? [{ id:"leaderboard", label:"🏆 Leaderboard" }] : []),
-    ...(isAdmin ? [{ id:"fitness",     label:"🏃 Fitness"     }] : []),
-    ...(isAdmin ? [{ id:"admin",       label:"⚙️ Admin"       }] : []),
+    ...(isAdmin ? [{ id:"leaderboard", label:"Results"  }] : []),
+    ...(isAdmin ? [{ id:"fitness",     label:"Testing"  }] : []),
+    ...(isAdmin ? [{ id:"admin",       label:"Admin"    }] : []),
   ];
 
   return (
@@ -954,7 +957,7 @@ function ProgressTab({ player, checks, isAdmin }) {
   );
 
   return (
-    <div style={{padding:"14px 16px"}}>
+    <div className="home-wrap">
 
       {/* ── Player banner ── */}
       <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
