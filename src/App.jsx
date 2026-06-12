@@ -184,7 +184,7 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .btn-danger{background:#8b0000;color:white;font-size:16px}
 .err{font-size:13px;color:#a31621;margin-bottom:10px;padding:10px 13px;background:#fde8ea;border-radius:8px}
 .link-btn{background:none;border:none;color:var(--g);font-family:'Lato',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0}
-.home-wrap{padding:14px 16px}
+.home-wrap{padding:14px 16px;width:100%;box-sizing:border-box}
 .welcome-card{background:linear-gradient(135deg,var(--g) 0%,var(--g2) 100%);border-radius:var(--radius);padding:22px 20px;margin-bottom:14px;color:white;position:relative;overflow:hidden}
 .welcome-card::after{content:'🏑';position:absolute;right:-8px;bottom:-12px;font-size:100px;opacity:0.08;pointer-events:none}
 .welcome-card h2{font-family:'Barlow Condensed',sans-serif;font-size:32px;color:white;letter-spacing:0.02em}
@@ -252,7 +252,7 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .squad-mark{width:100%;padding:11px;border:none;border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.05em;transition:all 0.2s;background:var(--gold);color:var(--dark)}
 .squad-mark:hover{background:#b88a10}
 .squad-mark.done{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.7)}
-.admin-wrap{padding:14px 16px}
+.admin-wrap{padding:14px 16px;width:100%;box-sizing:border-box}
 .admin-banner{background:var(--dark);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
 .admin-banner h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;color:var(--gold);letter-spacing:0.03em}
 .admin-banner p{font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px}
@@ -1334,25 +1334,25 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   async function savePlayer(pid) {
     setSaving(s => ({ ...s, [pid]: true }));
     const e  = entries[pid] || {};
-    const cn = cnotes[pid]  || {};
+    const cn = cnotes[pid]  || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
     let errs = 0;
 
-    // fitness notes (text only — lap_time saved on blur)
-    if (e.notes?.trim()) {
+    // fitness notes
+    const fitnessNote = e.notes?.trim() ?? null;
+    if (fitnessNote !== null) {
       const { error } = await sb.from("fitness_tests").upsert({
         player_id: pid, period, test_date: testDate,
-        notes: e.notes.trim(), updated_at: new Date().toISOString(),
+        notes: fitnessNote || null, updated_at: new Date().toISOString(),
       }, { onConflict:"player_id,period" });
       if (error) errs++;
     }
 
-    // coach notes for each sport
+    // coach notes — always upsert both sports (allows saving and clearing)
     for (const sport of ["football","hurling"]) {
-      const note = cn[sport]?.myNote?.trim();
-      if (!note) continue;
+      const note = (cn[sport]?.myNote ?? "").trim();
       const payload = {
         player_id: pid, sport, coach_email: coachEmail,
-        session_date: testDate, note,
+        session_date: testDate, note: note || null,
         updated_at: new Date().toISOString(),
       };
       const { error } = await sb.from("coach_notes")
@@ -1360,14 +1360,15 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       if (error) errs++;
       else {
         setCnotes(c => {
-          const existing = (c[pid]?.[sport]?.saved||[]).filter(s => s.coach_email !== coachEmail);
-          return { ...c, [pid]: { ...c[pid], [sport]: { ...c[pid][sport], saved:[...existing, payload] } } };
+          const prev = c[pid] || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
+          const existing = (prev[sport]?.saved||[]).filter(s => s.coach_email !== coachEmail);
+          return { ...c, [pid]: { ...prev, [sport]: { ...prev[sport], saved:[...existing, payload] } } };
         });
       }
     }
 
     setSaving(s => ({ ...s, [pid]: false }));
-    errs ? showToast("⚠️ Some notes failed to save") : showToast(`✅ Notes saved!`);
+    errs ? showToast("⚠️ Some notes failed to save") : showToast("✅ Notes saved!");
   }
 
   const coachName = email => ({ "e.t.archbold@gmail.com": "Elaine", "seangallagher2506@gmail.com": "Sean", "dodplumbing@gmail.com": "Coach 3" }[email] || email.split("@")[0]);
