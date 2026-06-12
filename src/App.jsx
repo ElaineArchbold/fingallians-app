@@ -146,7 +146,7 @@ const CSS = `
   --shadow-lg:0 8px 40px rgba(163,22,33,0.18);
 }
 body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;-webkit-font-smoothing:antialiased}
-.shell{max-width:480px;margin:0 auto;padding-bottom:88px}
+.shell{max-width:480px;width:100%;margin:0 auto;padding-bottom:88px}
 .hdr{background:var(--g);padding:18px 18px 0;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--gold)}
 .hdr-row{display:flex;align-items:center;gap:12px;padding-bottom:14px}
 .crest{width:50px;height:50px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 2px var(--gold),0 0 0 4px rgba(255,255,255,0.15);background:white}
