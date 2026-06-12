@@ -434,15 +434,11 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "progress" && (
-          <div className="home-wrap" style={{width:"100%",boxSizing:"border-box"}}>
-            <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
-          </div>
+          <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
         )}
 
         {session && isAdmin && tab === "coaches" && (
-          <div className="admin-wrap">
-            <CoachesTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
-          </div>
+          <CoachesTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
         )}
 
         {session && isAdmin && tab === "admin" && (
@@ -963,14 +959,14 @@ function ProgressTab({ player, checks, isAdmin }) {
   const maxWeekActivity = Math.max(...weeklyData.map(w => w.maxPoss), 1);
 
   if (!player) return (
-    <div style={{textAlign:"center",paddingTop:40,color:"var(--muted)"}}>
+    <div className="home-wrap" style={{textAlign:"center",paddingTop:40,color:"var(--muted)"}}>
       <div style={{fontSize:40,marginBottom:12}}>👤</div>
       <div style={{fontSize:14}}>No player linked yet.</div>
     </div>
   );
 
   return (
-    <div style={{width:"100%"}}>
+    <div className="home-wrap">
 
       {/* ── Player banner ── */}
       <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
@@ -1139,18 +1135,14 @@ function ProgressTab({ player, checks, isAdmin }) {
 }
 
 // ── CoachesTab ────────────────────────────────────────────────────────────────
-// Single admin tab covering: Leaderboard, Fitness Testing, Coach Notes
 function CoachesTab({ allPlayers, coachEmail, showToast }) {
   const [sub, setSub] = useState("leaderboard");
-
   const subTabs = [
     { id:"leaderboard", label:"Leaderboard" },
     { id:"fitness",     label:"Testing"     },
   ];
-
   return (
-    <div>
-      {/* Sub-tab toggle */}
+    <div className="admin-wrap">
       <div style={{display:"flex",borderRadius:10,overflow:"hidden",
                    border:"2px solid #a31621",marginBottom:16}}>
         {subTabs.map(t => (
@@ -1164,7 +1156,6 @@ function CoachesTab({ allPlayers, coachEmail, showToast }) {
           }}>{t.label}</button>
         ))}
       </div>
-
       {sub === "leaderboard" && <ScoresTab />}
       {sub === "fitness"     && <FitnessTab allPlayers={allPlayers} coachEmail={coachEmail} showToast={showToast} />}
     </div>
@@ -1201,8 +1192,7 @@ function ScoresTab() {
   const maxPossible = WEEKS.reduce((a,w) => a + weekMaxPts(w), 0);
 
   return (
-    <div className="admin-wrap">
-      {/* Hero */}
+    <div>
       <div style={{background:"linear-gradient(135deg,var(--g) 0%,#4a0a0e 100%)",borderRadius:"var(--radius)",padding:"22px 20px",marginBottom:14,color:"white",textAlign:"center",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-10,bottom:-14,fontSize:100,opacity:0.07,pointerEvents:"none"}}>🏆</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,letterSpacing:"0.02em",color:"var(--gold)"}}>LEADERBOARD</div>
