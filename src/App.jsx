@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
@@ -362,11 +362,12 @@ export default function App() {
   );
 
   const TABS = [
-    { id:"home", label:"Home" },
-    { id:"plan", label:"Plan" },
-    { id:"scores", label:"Scores" },
-    ...(isAdmin ? [{ id:"fitness",  label:"🏃 Fitness"  }] : []),
-    ...(isAdmin ? [{ id:"admin",    label:"⚙️ Admin"    }] : []),
+    { id:"home",     label:"Home"        },
+    { id:"plan",     label:"Plan"        },
+    { id:"progress", label:"Progress"    },
+    ...(isAdmin ? [{ id:"leaderboard", label:"🏆 Leaderboard" }] : []),
+    ...(isAdmin ? [{ id:"fitness",     label:"🏃 Fitness"     }] : []),
+    ...(isAdmin ? [{ id:"admin",       label:"⚙️ Admin"       }] : []),
   ];
 
   return (
@@ -407,7 +408,11 @@ export default function App() {
           <PlanTab checks={checks} onToggle={toggleTask} player={player} />
         )}
 
-        {session && (player || isAdmin) && tab === "scores" && (
+        {session && (player || isAdmin) && tab === "progress" && (
+          <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
+        )}
+
+        {session && isAdmin && tab === "leaderboard" && (
           <ScoresTab player={player} />
         )}
 
@@ -839,6 +844,285 @@ function PlanTab({ checks, onToggle, player }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // SCORES TAB — leaderboard visible to all logged-in users
 // ══════════════════════════════════════════════════════════════════════════════
+// ── ProgressTab ───────────────────────────────────────────────────────────────
+// Shows the logged-in player's own progress: KMs run + skills practised per week
+function ProgressTab({ player, checks, isAdmin }) {
+  const [completions, setCompletions] = useState([]); // [{task_key, completed_at}]
+  const [loading, setLoading]         = useState(true);
+
+  // Fetch completions WITH timestamps for this player
+  useEffect(() => {
+    if (!player) { setLoading(false); return; }
+    sb.from("task_completions")
+      .select("task_key, completed_at")
+      .eq("player_id", player.id)
+      .order("completed_at", { ascending: false })
+      .then(({ data }) => {
+        setCompletions(data || []);
+        setLoading(false);
+      });
+  }, [player?.id]);
+
+  // ── Derived stats ──────────────────────────────────────────
+  const stats = useMemo(() => {
+    let sessions = 0, minutes = 0, pts = 0;
+    let totalKm = 0;
+
+    // minutes per activity type (from desc text or fixed values)
+    const runMins   = 20;  // average per run
+    const skillMins = 20;  // average per skill session
+    const squadMins = 20;  // squad session
+
+    WEEKS.forEach(w => {
+      w.runs.forEach((r, i) => {
+        if (checks[runKey(w.week, i)]) {
+          sessions++; minutes += runMins; pts += PTS.run;
+          totalKm += parseFloat(r.distance) || 0;
+        }
+      });
+      w.skills.forEach(s => {
+        if (checks[skillKey(w.week, s.id)]) {
+          sessions++; minutes += skillMins; pts += PTS.skill;
+        }
+      });
+      if (checks[squadKey(w.week)]) {
+        sessions++; minutes += squadMins; pts += PTS.squad;
+      }
+    });
+    return { sessions, minutes, pts, totalKm };
+  }, [checks]);
+
+  // ── Weekly activity for bar chart ─────────────────────────
+  const weeklyData = useMemo(() => {
+    return WEEKS.map(w => {
+      let runs = 0, skills = 0, squad = 0;
+      w.runs.forEach((_, i) => { if (checks[runKey(w.week, i)])   runs++; });
+      w.skills.forEach(s    => { if (checks[skillKey(w.week, s.id)]) skills++; });
+      if (checks[squadKey(w.week)]) squad = 1;
+      const total   = runs + skills + squad;
+      const maxPoss = w.runs.length + w.skills.length + 1;
+      return { week: w.week, runs, skills, squad, total, maxPoss };
+    });
+  }, [checks]);
+
+  // ── Activity log — map task_key → human label + date ──────
+  const activityLog = useMemo(() => {
+    return completions.map(c => {
+      const k = c.task_key;
+      let label = "", type = "other", week = null;
+
+      WEEKS.forEach(w => {
+        w.runs.forEach((r, i) => {
+          if (runKey(w.week, i) === k) {
+            label = `${r.label} (${r.distance})`;
+            type  = "run"; week = w.week;
+          }
+        });
+        w.skills.forEach(s => {
+          if (skillKey(w.week, s.id) === k) {
+            label = s.label.replace(/^[^\w]+/, "").split(":")[0].trim();
+            type  = "skill"; week = w.week;
+          }
+        });
+        if (squadKey(w.week) === k) {
+          label = `Squad Session`; type = "squad"; week = w.week;
+        }
+      });
+
+      const date = c.completed_at
+        ? new Date(c.completed_at).toLocaleDateString("en-IE", { day:"numeric", month:"short", year:"numeric" })
+        : null;
+
+      return { label, type, week, date, key: k };
+    }).filter(a => a.label); // skip any unrecognised keys
+  }, [completions]);
+
+  // ── Colour + icon per type ─────────────────────────────────
+  const typeStyle = {
+    run:   { color:"var(--g)",  bg:"var(--g3)",  icon:"🏃" },
+    skill: { color:"#2e7d32",   bg:"#e8f5e9",    icon:"🏑" },
+    squad: { color:"#c45e00",   bg:"#fff3e0",    icon:"👥" },
+  };
+
+  const maxWeekActivity = Math.max(...weeklyData.map(w => w.maxPoss), 1);
+
+  if (!player) return (
+    <div style={{padding:"40px 16px",textAlign:"center",color:"var(--muted)"}}>
+      <div style={{fontSize:40,marginBottom:12}}>👤</div>
+      <div style={{fontSize:14}}>No player linked yet.</div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:"14px 16px"}}>
+
+      {/* ── Player banner ── */}
+      <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
+                   padding:"16px 18px",marginBottom:14,color:"#fff",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",right:-8,bottom:-10,fontSize:70,opacity:0.07}}>🏃</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,color:"var(--gold)",letterSpacing:"0.02em"}}>
+          {player.name.split(" ")[0]}'s Progress
+        </div>
+        <div style={{fontSize:11,opacity:0.65,marginTop:2}}>Fingallians 2014 · Summer Challenge 2026</div>
+        {isAdmin && (
+          <div style={{fontSize:10,marginTop:4,background:"rgba(255,255,255,.12)",
+                       display:"inline-block",padding:"2px 8px",borderRadius:10,
+                       color:"rgba(255,255,255,.75)"}}>
+            👁 Viewing as admin
+          </div>
+        )}
+      </div>
+
+      {/* ── 3 stat boxes ── */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+        {[
+          { label:"Sessions\nLogged",    value: stats.sessions,            suffix:"",     color:"var(--g)",  icon:"✅" },
+          { label:"Minutes\nActive",     value: stats.minutes,             suffix:" min", color:"#2e7d32",   icon:"⏱" },
+          { label:"Total\nPoints",       value: stats.pts,                 suffix:" pts", color:"var(--gold-dark,#b8860b)", icon:"⭐" },
+        ].map(s => (
+          <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 8px",
+                                     textAlign:"center",boxShadow:"0 2px 10px rgba(163,22,33,.07)"}}>
+            <div style={{fontSize:20}}>{s.icon}</div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,
+                         color:s.color,lineHeight:1,marginTop:4}}>
+              {s.value}{s.suffix}
+            </div>
+            <div style={{fontSize:10,color:"var(--muted)",marginTop:3,
+                         whiteSpace:"pre-line",lineHeight:1.3}}>
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Weekly activity bar chart ── */}
+      <div style={{background:"white",borderRadius:14,padding:"14px",marginBottom:14,
+                   boxShadow:"0 2px 10px rgba(163,22,33,.06)"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
+                     letterSpacing:"0.04em",marginBottom:12}}>WEEKLY ACTIVITY</div>
+
+        {/* Legend */}
+        <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap"}}>
+          {[["var(--g)","Runs"],["#2e7d32","Skills"],["#c45e00","Squad"]].map(([c,l]) => (
+            <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:10,height:10,borderRadius:2,background:c,flexShrink:0}}/>
+              <span style={{fontSize:10,color:"var(--muted)"}}>{l}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Bars */}
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",height:80}}>
+          {weeklyData.map(w => {
+            const barH    = Math.max((w.total / maxWeekActivity) * 72, w.total > 0 ? 4 : 0);
+            const runH    = (w.runs   / w.total || 0) * barH;
+            const skillH  = (w.skills / w.total || 0) * barH;
+            const squadH  = (w.squad  / w.total || 0) * barH;
+            const allDone = w.total === w.maxPoss;
+            return (
+              <div key={w.week} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                {/* Stacked bar */}
+                <div style={{width:"100%",display:"flex",flexDirection:"column",
+                             justifyContent:"flex-end",height:72,gap:1}}>
+                  {w.squad > 0 && (
+                    <div style={{width:"100%",height:Math.max(squadH,2),background:"#c45e00",
+                                 borderRadius:"2px 2px 0 0",minHeight:3}}/>
+                  )}
+                  {w.skills > 0 && (
+                    <div style={{width:"100%",height:Math.max(skillH,2),background:"#2e7d32",minHeight:3}}/>
+                  )}
+                  {w.runs > 0 && (
+                    <div style={{width:"100%",height:Math.max(runH,2),background:"var(--g)",
+                                 borderRadius: w.skills === 0 && w.squad === 0 ? "2px 2px 0 0" : 0,
+                                 minHeight:3}}/>
+                  )}
+                  {w.total === 0 && (
+                    <div style={{width:"100%",height:3,background:"#f0dede",borderRadius:2}}/>
+                  )}
+                </div>
+                {/* Week label */}
+                <div style={{fontSize:9,color: allDone ? "var(--g)" : "var(--muted)",
+                             fontWeight: allDone ? 700 : 400}}>
+                  W{w.week}{allDone ? "✓" : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* KM total */}
+        {stats.totalKm > 0 && (
+          <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f0e8e8",
+                       display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:18}}>🏃</span>
+            <div>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,
+                            color:"var(--g)",fontWeight:700}}>{stats.totalKm.toFixed(1)} km</span>
+              <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>total distance run</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Activity log ── */}
+      <div style={{background:"white",borderRadius:14,padding:"14px",
+                   boxShadow:"0 2px 10px rgba(163,22,33,.06)"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
+                     letterSpacing:"0.04em",marginBottom:12}}>ACTIVITY LOG</div>
+
+        {loading && (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>Loading…</div>
+        )}
+
+        {!loading && activityLog.length === 0 && (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>
+            No sessions logged yet — get out there! 🏃
+          </div>
+        )}
+
+        {!loading && activityLog.map((a, i) => {
+          const ts = typeStyle[a.type] || typeStyle.skill;
+          return (
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,
+                                  padding:"9px 0",
+                                  borderBottom: i < activityLog.length-1 ? "1px solid #f8f0f0" : "none"}}>
+              {/* Icon badge */}
+              <div style={{width:32,height:32,borderRadius:"50%",background:ts.bg,
+                           display:"flex",alignItems:"center",justifyContent:"center",
+                           fontSize:16,flexShrink:0}}>
+                {ts.icon}
+              </div>
+              {/* Label + week */}
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--dark)",lineHeight:1.3}}>
+                  {a.label}
+                </div>
+                {a.week && (
+                  <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>
+                    Week {a.week}
+                  </div>
+                )}
+              </div>
+              {/* Date */}
+              {a.date && (
+                <div style={{fontSize:11,color:"var(--muted)",textAlign:"right",flexShrink:0}}>
+                  {a.date}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:14,lineHeight:1.7}}>
+        🏆 Most Improved Player prize at end of summer<br/>
+        Keep logging to stay in the running!
+      </div>
+    </div>
+  );
+}
+
+// ── ScoresTab (Leaderboard — admin only) ──────────────────────────────────────
 function ScoresTab({ player }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
