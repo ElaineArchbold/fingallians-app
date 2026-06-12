@@ -154,8 +154,8 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .hdr-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:white;line-height:1;letter-spacing:0.03em}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px}
 .hdr-player{font-size:12px;color:var(--gold2);font-weight:700;margin-top:2px}
-.tabs{display:grid;gap:3px}.tabs.t3{grid-template-columns:repeat(3,1fr)}.tabs.t5{grid-template-columns:repeat(5,1fr)}
-.tab-btn{padding:10px 4px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:clamp(11px,3.2vw,15px);letter-spacing:0.03em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent;white-space:nowrap;text-align:center;width:100%}
+.tabs{display:flex;gap:3px;width:100%}
+.tab-btn{flex:1;min-width:0;padding:10px 2px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:clamp(11px,3vw,15px);letter-spacing:0.02em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tab-btn.active{background:var(--bg);color:var(--g);font-size:15px;border-bottom:3px solid var(--bg)}
 .auth-wrap{padding:24px 18px}
 .auth-hero{background:var(--g);border-radius:var(--radius);padding:30px 24px 26px;margin-bottom:18px;color:white;position:relative;overflow:hidden;text-align:center}
@@ -409,7 +409,7 @@ export default function App() {
                 {player && <div className="hdr-player">👤 {player.name} · {pts} pts</div>}
               </div>
             </div>
-            <div className={`tabs t${TABS.length}`} style={{gridTemplateColumns:`repeat(${TABS.length},1fr)`}}>
+            <div className="tabs">
               {TABS.map(t => (
                 <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`} onClick={() => setTab(t.id)}>
                   {t.label}
@@ -1205,13 +1205,12 @@ function ScoresTab() {
       ) : leaderboard.length === 0 ? (
         <div className="empty"><div className="icon">🏑</div><p>No scores yet — get logging!</p></div>
       ) : leaderboard.map((p, i) => {
-        const isYou = player?.id === p.id;
         const pct   = Math.round((p.pts / maxPossible) * 100);
         return (
           <div key={p.id} style={{
             display:"flex",alignItems:"center",gap:12,
-            background: isYou ? "var(--g3)" : "white",
-            border: isYou ? "2px solid var(--g)" : "2px solid transparent",
+            background:"white",
+            border:"2px solid transparent",
             borderRadius:14,padding:"12px 14px",marginBottom:8,
             boxShadow:"0 2px 10px rgba(163,22,33,0.08)"
           }}>
@@ -1222,7 +1221,7 @@ function ScoresTab() {
               {p.name[0]}
             </div>
             <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:15}}>{p.name}{isYou?" 👈":""}</div>
+              <div style={{fontWeight:700,fontSize:15}}>{p.name}</div>
               <div style={{height:4,background:"#f0dede",borderRadius:2,marginTop:5,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${pct}%`,background:i===0?"var(--gold)":"var(--g)",borderRadius:2,transition:"width 0.4s"}}/>
               </div>
