@@ -9,6 +9,11 @@ const ADMIN_EMAILS = [
   "seangallagher2506@gmail.com",
   "dodplumbing@gmail.com",
 ];
+
+// Admin accounts that should be auto-linked to a player by name
+const ADMIN_PLAYER_NAMES = {
+  "e.t.archbold@gmail.com": "Rory Archbold Forde",
+};
 // Elaine's child — auto-linked if not already linked
 const ADMIN_PLAYER_NAME = "Rory Archbold Forde";
 
@@ -327,6 +332,24 @@ export default function App() {
       const c = {};
       comps?.forEach(r => { c[r.task_key] = true; });
       setChecks(c);
+    } else {
+      // Auto-link admin accounts that have a mapped player name
+      const mappedName = ADMIN_PLAYER_NAMES[session.user.email];
+      if (mappedName) {
+        const { data: found } = await sb
+          .from("players")
+          .select("id,name")
+          .ilike("name", mappedName)
+          .maybeSingle();
+        if (found) {
+          await sb.from("parent_players").insert({ user_id: session.user.id, player_id: found.id });
+          setPlayer(found);
+          const { data: comps } = await sb.from("task_completions").select("task_key").eq("player_id", found.id);
+          const c = {};
+          comps?.forEach(r => { c[r.task_key] = true; });
+          setChecks(c);
+        }
+      }
     }
   }
 
@@ -1155,7 +1178,7 @@ function ScoresTab({ player }) {
   const maxPossible = WEEKS.reduce((a,w) => a + weekMaxPts(w), 0);
 
   return (
-    <div style={{padding:"14px 16px"}}>
+    <div className="admin-wrap">
       {/* Hero */}
       <div style={{background:"linear-gradient(135deg,var(--g) 0%,#4a0a0e 100%)",borderRadius:"var(--radius)",padding:"22px 20px",marginBottom:14,color:"white",textAlign:"center",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-10,bottom:-14,fontSize:100,opacity:0.07,pointerEvents:"none"}}>🏆</div>
