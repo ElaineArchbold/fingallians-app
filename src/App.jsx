@@ -1280,6 +1280,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
   const [ptsMap,   setPtsMap]   = useState({});
+  const lapDebounce = useRef({});  // { [pid]: timeoutId }
 
   // Load fitness + coach notes together
   useEffect(() => {
@@ -1455,19 +1456,24 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
                   <div>
                     <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap Time</div>
                     <input className="inp" placeholder="m:ss" value={e.lap}
-                      onChange={ev => setField(p.id,"lap",ev.target.value)}
-                      onBlur={async ev => {
-                        const secs = parseTime(ev.target.value);
-                        if (!secs) return;
-                        const cur = entries[p.id] || {};
-                        const { error } = await sb.from("fitness_tests").upsert({
-                          player_id: p.id, period, test_date: testDate,
-                          lap_time: secs,
-                          notes: cur.notes?.trim() || null,
-                          updated_at: new Date().toISOString(),
-                        }, { onConflict:"player_id,period" });
-                        if (!error) showToast(`✅ ${p.name.split(" ")[0]} lap saved`);
-                        else showToast("⚠️ Lap save failed");
+                      onChange={ev => {
+                        const val = ev.target.value;
+                        setField(p.id,"lap",val);
+                        // Debounced auto-save: fires 800ms after user stops typing
+                        clearTimeout(lapDebounce.current[p.id]);
+                        lapDebounce.current[p.id] = setTimeout(async () => {
+                          const secs = parseTime(val);
+                          const cur  = entries[p.id] || {};
+                          // Save whether valid time or cleared (null clears the record)
+                          const { error } = await sb.from("fitness_tests").upsert({
+                            player_id: p.id, period, test_date: testDate,
+                            lap_time: secs || null,
+                            notes: cur.notes?.trim() || null,
+                            updated_at: new Date().toISOString(),
+                          }, { onConflict:"player_id,period" });
+                          if (!error) showToast(secs ? `✅ ${p.name.split(" ")[0]} lap saved` : `✅ ${p.name.split(" ")[0]} lap cleared`);
+                          else showToast("⚠️ Lap save failed");
+                        }, 800);
                       }}
                       style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
                               borderColor:!lapValid?"#e53935":undefined,
