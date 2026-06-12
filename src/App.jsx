@@ -973,7 +973,7 @@ function ProgressTab({ player, checks, isAdmin }) {
   const maxWeekActivity = Math.max(...weeklyData.map(w => w.maxPoss), 1);
 
   if (!player) return (
-    <div style={{padding:"40px 16px",textAlign:"center",color:"var(--muted)"}}>
+    <div className="home-wrap" style={{textAlign:"center",paddingTop:40,color:"var(--muted)"}}>
       <div style={{fontSize:40,marginBottom:12}}>👤</div>
       <div style={{fontSize:14}}>No player linked yet.</div>
     </div>
@@ -1000,14 +1000,14 @@ function ProgressTab({ player, checks, isAdmin }) {
       </div>
 
       {/* ── 3 stat boxes ── */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16,width:"100%"}}>
         {[
-          { label:"Sessions\nLogged",    value: stats.sessions,            suffix:"",     color:"var(--g)",  icon:"✅" },
-          { label:"Minutes\nActive",     value: stats.minutes,             suffix:" min", color:"#2e7d32",   icon:"⏱" },
-          { label:"Total\nPoints",       value: stats.pts,                 suffix:" pts", color:"var(--gold-dark,#b8860b)", icon:"⭐" },
+          { label:"Sessions\nLogged",    value: stats.sessions, suffix:"",     color:"var(--g)",  icon:"✅" },
+          { label:"Minutes\nActive",     value: stats.minutes,  suffix:" min", color:"#2e7d32",   icon:"⏱" },
+          { label:"Total\nPoints",       value: stats.pts,      suffix:" pts", color:"#b8860b",   icon:"⭐" },
         ].map(s => (
           <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 8px",
-                                     textAlign:"center",boxShadow:"0 2px 10px rgba(163,22,33,.07)"}}>
+                                     textAlign:"center",border:"1px solid #f0dede"}}>
             <div style={{fontSize:20}}>{s.icon}</div>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,
                          color:s.color,lineHeight:1,marginTop:4}}>
@@ -1023,7 +1023,7 @@ function ProgressTab({ player, checks, isAdmin }) {
 
       {/* ── Weekly activity bar chart ── */}
       <div style={{background:"white",borderRadius:14,padding:"14px",marginBottom:14,
-                   boxShadow:"0 2px 10px rgba(163,22,33,.06)"}}>
+                   border:"1px solid #f0dede",width:"100%"}}>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
                      letterSpacing:"0.04em",marginBottom:12}}>WEEKLY ACTIVITY</div>
 
@@ -1092,7 +1092,7 @@ function ProgressTab({ player, checks, isAdmin }) {
 
       {/* ── Activity log ── */}
       <div style={{background:"white",borderRadius:14,padding:"14px",
-                   boxShadow:"0 2px 10px rgba(163,22,33,.06)"}}>
+                   border:"1px solid #f0dede",width:"100%"}}>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
                      letterSpacing:"0.04em",marginBottom:12}}>ACTIVITY LOG</div>
 
