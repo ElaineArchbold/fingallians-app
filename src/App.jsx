@@ -435,7 +435,9 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "progress" && (
-          <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
+          <div className="home-wrap" style={{width:"100%",boxSizing:"border-box"}}>
+            <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
+          </div>
         )}
 
         {session && isAdmin && tab === "leaderboard" && (
@@ -973,14 +975,14 @@ function ProgressTab({ player, checks, isAdmin }) {
   const maxWeekActivity = Math.max(...weeklyData.map(w => w.maxPoss), 1);
 
   if (!player) return (
-    <div className="home-wrap" style={{textAlign:"center",paddingTop:40,color:"var(--muted)"}}>
+    <div style={{textAlign:"center",paddingTop:40,color:"var(--muted)"}}>
       <div style={{fontSize:40,marginBottom:12}}>👤</div>
       <div style={{fontSize:14}}>No player linked yet.</div>
     </div>
   );
 
   return (
-    <div className="home-wrap">
+    <div style={{width:"100%"}}>
 
       {/* ── Player banner ── */}
       <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
