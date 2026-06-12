@@ -1273,12 +1273,13 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [period,   setPeriod]   = useState("pre");
   const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
   const [view,     setView]     = useState("entry");
-  const [entries,  setEntries]  = useState({});  // { [pid]: { lap, notes } }
-  const [cnotes,   setCnotes]   = useState({});  // { [pid]: { football: {myNote,saved[]}, hurling: {myNote,saved[]} } }
-  const [open,     setOpen]     = useState({});  // { [pid+sport]: bool } accordion state
+  const [entries,  setEntries]  = useState({});
+  const [cnotes,   setCnotes]   = useState({});
+  const [open,     setOpen]     = useState({});
   const [saving,   setSaving]   = useState({});
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
+  const [ptsMap,   setPtsMap]   = useState({});
 
   // Load fitness + coach notes together
   useEffect(() => {
@@ -1288,7 +1289,8 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     Promise.all([
       sb.from("fitness_tests").select("*").in("player_id", ids).eq("period", period),
       sb.from("coach_notes").select("*").in("player_id", ids),
-    ]).then(([{ data: ft }, { data: cn }]) => {
+      sb.from("task_completions").select("player_id,task_key").in("player_id", ids),
+    ]).then(([{ data: ft }, { data: cn }, { data: comps }]) => {
       // Seed entries
       const eMap = {};
       allPlayers.forEach(p => { eMap[p.id] = { lap: "", notes: "" }; });
@@ -1315,6 +1317,17 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
         if (r.coach_email === coachEmail) cMap[r.player_id][sport].myNote = r.note || "";
       });
       setCnotes(cMap);
+
+      // Calculate pts per player from task_completions
+      const statsMap = {};
+      comps?.forEach(r => {
+        if (!statsMap[r.player_id]) statsMap[r.player_id] = {};
+        statsMap[r.player_id][r.task_key] = true;
+      });
+      const pm = {};
+      ids.forEach(id => { pm[id] = totalPts(statsMap[id] || {}); });
+      setPtsMap(pm);
+
       setLoading(false);
     });
   }, [period, allPlayers, coachEmail]);
@@ -1337,17 +1350,16 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     const cn = cnotes[pid]  || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
     let errs = 0;
 
-    // fitness notes
-    const fitnessNote = e.notes?.trim() ?? null;
-    if (fitnessNote !== null) {
-      const { error } = await sb.from("fitness_tests").upsert({
-        player_id: pid, period, test_date: testDate,
-        notes: fitnessNote || null, updated_at: new Date().toISOString(),
-      }, { onConflict:"player_id,period" });
-      if (error) errs++;
-    }
+    // Always upsert fitness row with both lap_time AND notes so neither clobbers the other
+    const { error: ftErr } = await sb.from("fitness_tests").upsert({
+      player_id: pid, period, test_date: testDate,
+      lap_time:  parseTime(e.lap) || null,
+      notes:     e.notes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict:"player_id,period" });
+    if (ftErr) errs++;
 
-    // coach notes — always upsert both sports (allows saving and clearing)
+    // Coach notes — always upsert both sports
     for (const sport of ["football","hurling"]) {
       const note = (cn[sport]?.myNote ?? "").trim();
       const payload = {
@@ -1368,7 +1380,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     }
 
     setSaving(s => ({ ...s, [pid]: false }));
-    errs ? showToast("⚠️ Some notes failed to save") : showToast("✅ Notes saved!");
+    errs ? showToast("⚠️ Some changes failed to save") : showToast("✅ Saved!");
   }
 
   const coachName = email => ({ "e.t.archbold@gmail.com": "Elaine", "seangallagher2506@gmail.com": "Sean", "dodplumbing@gmail.com": "Coach 3" }[email] || email.split("@")[0]);
@@ -1432,7 +1444,14 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
                 {/* Name + lap time */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 90px",gap:8,padding:"10px 12px",alignItems:"center"}}>
-                  <div style={{fontWeight:700,fontSize:13,color:"var(--dark)"}}>{p.name}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--dark)",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    {p.name}
+                    <span style={{background:"#fff4cc",color:"#7a5c00",fontSize:11,
+                                  fontWeight:900,padding:"1px 7px",borderRadius:10,
+                                  border:"1px solid #d4a017",flexShrink:0}}>
+                      {ptsMap[p.id] || 0} pts
+                    </span>
+                  </div>
                   <div>
                     <div style={{fontSize:9,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3,textAlign:"center"}}>Lap Time</div>
                     <input className="inp" placeholder="m:ss" value={e.lap}
@@ -1440,11 +1459,15 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
                       onBlur={async ev => {
                         const secs = parseTime(ev.target.value);
                         if (!secs) return;
-                        await sb.from("fitness_tests").upsert({
+                        const cur = entries[p.id] || {};
+                        const { error } = await sb.from("fitness_tests").upsert({
                           player_id: p.id, period, test_date: testDate,
-                          lap_time: secs, updated_at: new Date().toISOString(),
+                          lap_time: secs,
+                          notes: cur.notes?.trim() || null,
+                          updated_at: new Date().toISOString(),
                         }, { onConflict:"player_id,period" });
-                        showToast(`✅ ${p.name.split(" ")[0]} lap saved`);
+                        if (!error) showToast(`✅ ${p.name.split(" ")[0]} lap saved`);
+                        else showToast("⚠️ Lap save failed");
                       }}
                       style={{textAlign:"center",padding:"5px 4px",fontSize:13,fontWeight:700,
                               borderColor:!lapValid?"#e53935":undefined,
@@ -1516,7 +1539,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
       {/* ── RESULTS VIEW ── */}
       {!loading && view === "results" && (
-        <ResultsTable allPlayers={allPlayers} period={period} />
+        <ResultsTable allPlayers={allPlayers} period={period} ptsMap={ptsMap} />
       )}
     </div>
   );
@@ -1561,33 +1584,16 @@ function NoteAccordionBody({ sport, cn, coachEmail, coachName, coachColor, onCha
 }
 
 // ── ResultsTable ──────────────────────────────────────────────────────────────
-function ResultsTable({ allPlayers, period }) {
-  const [allTests,   setAllTests]   = useState([]);
-  const [ptsMap,     setPtsMap]     = useState({});  // { playerId: pts }
-  const [loading,    setLoading]    = useState(true);
-  const [showPeriod, setShowPeriod] = useState(period);
+function ResultsTable({ allPlayers, period, ptsMap = {} }) {
+  const [allTests,    setAllTests]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showPeriod,  setShowPeriod]  = useState(period);
 
   useEffect(() => {
     if (!allPlayers.length) return;
-    const ids = allPlayers.map(p => p.id);
-    Promise.all([
-      sb.from("fitness_tests").select("*").in("player_id", ids),
-      sb.from("task_completions").select("player_id,task_key").in("player_id", ids),
-    ]).then(([{ data: tests }, { data: comps }]) => {
-      setAllTests(tests || []);
-      // Calculate points per player
-      const map = {};
-      ids.forEach(id => { map[id] = 0; });
-      // Group completions by player
-      const byPlayer = {};
-      comps?.forEach(r => {
-        if (!byPlayer[r.player_id]) byPlayer[r.player_id] = {};
-        byPlayer[r.player_id][r.task_key] = true;
-      });
-      ids.forEach(id => { map[id] = totalPts(byPlayer[id] || {}); });
-      setPtsMap(map);
-      setLoading(false);
-    });
+    sb.from("fitness_tests").select("*")
+      .in("player_id", allPlayers.map(p => p.id))
+      .then(({ data }) => { setAllTests(data || []); setLoading(false); });
   }, [allPlayers]);
 
   if (loading) return <div style={{textAlign:"center",color:"#9a7070",padding:"20px 0",fontSize:13}}>Loading…</div>;
