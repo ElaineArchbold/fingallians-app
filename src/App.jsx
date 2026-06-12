@@ -154,8 +154,8 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .hdr-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:white;line-height:1;letter-spacing:0.03em}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px}
 .hdr-player{font-size:12px;color:var(--gold2);font-weight:700;margin-top:2px}
-.tabs{display:flex;gap:3px}
-.tab-btn{flex:1;padding:10px 2px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.04em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent}
+.tabs{display:flex;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:72px;padding:10px 2px;border:none;border-radius:10px 10px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.04em;cursor:pointer;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);transition:all 0.15s;border-bottom:3px solid transparent;white-space:nowrap}
 .tab-btn.active{background:var(--bg);color:var(--g);font-size:15px;border-bottom:3px solid var(--bg)}
 .auth-wrap{padding:24px 18px}
 .auth-hero{background:var(--g);border-radius:var(--radius);padding:30px 24px 26px;margin-bottom:18px;color:white;position:relative;overflow:hidden;text-align:center}
