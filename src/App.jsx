@@ -280,9 +280,11 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .skill-desc{font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:12px}
 .yt-wrap{border-radius:10px;overflow:hidden;position:relative;padding-bottom:56.25%;background:#000;margin-bottom:12px}
 .yt-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none}
-.yt-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#4a0a0e 0%,#1a0405 100%);color:white;cursor:pointer;gap:8px}
-.yt-play{width:52px;height:52px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:22px}
-.yt-note{font-size:12px;opacity:0.7;text-align:center;padding:0 16px}
+.yt-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;cursor:pointer;gap:8px;overflow:hidden}
+.yt-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.yt-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.25)}
+.yt-play{position:relative;z-index:2;width:56px;height:56px;border-radius:50%;background:rgba(255,0,0,0.9);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 2px 12px rgba(0,0,0,0.4);flex-shrink:0}
+.yt-note{position:relative;z-index:2;font-size:12px;text-align:center;padding:0 16px;text-shadow:0 1px 3px rgba(0,0,0,0.8);font-weight:700}
 .mark-btn{width:100%;padding:11px;border:none;border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.05em;transition:all 0.2s}
 .mark-done{background:var(--g);color:white}
 .mark-done:hover{background:#7d1018}
@@ -907,14 +909,29 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
 
 function VideoEmbed({ ytId, playing, onPlay, dark }) {
   const isPlaceholder = !ytId || ytId.startsWith("Demo");
+  // YouTube provides thumbnails at a predictable URL — hqdefault is reliable for all videos
+  const thumbUrl = ytId && !isPlaceholder
+    ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+    : null;
+
   return (
     <div className="yt-wrap" style={{marginBottom:12}}>
       {(isPlaceholder || !playing) ? (
-        <div className="yt-placeholder" style={dark?{background:"rgba(0,0,0,0.35)"}:{}} onClick={!isPlaceholder?onPlay:undefined}>
-          <div className="yt-play">{isPlaceholder?"🎬":"▶"}</div>
-          <div className="yt-note">
-            {isPlaceholder ? "Video demo coming soon" : "Tap to watch drill demonstration"}
-          </div>
+        <div className="yt-placeholder" onClick={!isPlaceholder?onPlay:undefined}>
+          {thumbUrl ? (
+            <>
+              <img className="yt-thumb" src={thumbUrl} alt="Video thumbnail" />
+              <div className="yt-overlay" />
+              <div className="yt-play">▶</div>
+              <div className="yt-note">Tap to watch</div>
+            </>
+          ) : (
+            <>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4a0a0e,#1a0405)"}} />
+              <div className="yt-play" style={{background:"var(--gold)"}}>🎬</div>
+              <div className="yt-note">Video coming soon</div>
+            </>
+          )}
         </div>
       ) : (
         <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`} allow="autoplay; encrypted-media" allowFullScreen />
