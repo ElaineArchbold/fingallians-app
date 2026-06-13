@@ -178,7 +178,23 @@ const CSS = `
   --shadow-lg:0 8px 40px rgba(163,22,33,0.18);
 }
 body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;-webkit-font-smoothing:antialiased}
-.shell{max-width:480px;width:100%;margin:0 auto;padding-bottom:88px}
+.shell{max-width:560px;width:100%;margin:0 auto;padding-bottom:88px}
+@media(min-width:640px){
+  .shell{max-width:720px}
+  .home-wrap,.admin-wrap,.wk-detail{padding:20px 28px}
+  .hdr{padding:20px 28px 0}
+  .week-grid{grid-template-columns:repeat(8,1fr)}
+  .pts-row{gap:16px}
+  .pts-box{padding:16px 14px}
+  .pts-box .num{font-size:44px}
+  .welcome-card{padding:28px 26px}
+  .welcome-card h2{font-size:40px}
+}
+@media(min-width:900px){
+  .shell{max-width:960px}
+  .home-wrap,.admin-wrap{padding:24px 32px}
+  .hdr{padding:20px 32px 0}
+}
 .hdr{background:var(--g);padding:18px 18px 0;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--gold)}
 .hdr-row{display:flex;align-items:center;gap:12px;padding-bottom:14px}
 .crest{width:50px;height:50px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 2px var(--gold),0 0 0 4px rgba(255,255,255,0.15);background:white}
@@ -520,8 +536,8 @@ function AuthScreen({ showToast }) {
   async function submit() {
     setErr(""); setBusy(true);
     if (mode === "signup") {
-      if (pw !== pw2) { setErr("Passwords don't match"); setBusy(false); return; }
-      if (pw.length < 6) { setErr("Password must be at least 6 characters"); setBusy(false); return; }
+      if (pw !== pw2) { setErr("Passwords do not match"); setBusy(false); return; }
+      if (pw.length < 6) { setErr("Password must be at least 6 characters long"); setBusy(false); return; }
       if (!tcAgreed) { setErr("Please agree to the Terms & Conditions to continue"); setBusy(false); return; }
       const { error } = await sb.auth.signUp({ email, password: pw,
         options: { emailRedirectTo: "https://fingallians-app.vercel.app" }
@@ -531,7 +547,7 @@ function AuthScreen({ showToast }) {
       setMode("verify");
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-      if (error) { setErr("Incorrect email or password. If you just registered, make sure you've clicked the confirmation link in your email first."); setBusy(false); return; }
+      if (error) { setErr("Incorrect email or password. If you have just registered, make sure you have clicked the confirmation link in your email first."); setBusy(false); return; }
     }
     setBusy(false);
   }
@@ -559,7 +575,7 @@ function AuthScreen({ showToast }) {
                 3️⃣ &nbsp;Come back here and sign in
               </div>
             </div>
-            <p style={{fontSize:12,color:"var(--muted)",marginBottom:20}}>Can't find it? Check your spam/junk folder.</p>
+            <p style={{fontSize:12,color:"var(--muted)",marginBottom:20}}>Cannot find it? Check your spam/junk folder.</p>
             <button className="btn btn-green" onClick={()=>{setMode("login");setEmail(signedUpEmail);setPw("");setPw2("");}}>
               GO TO SIGN IN →
             </button>
@@ -677,7 +693,7 @@ function LinkPlayerScreen({ onLink }) {
                   CONFIRM & CONTINUE
                 </button>
                 <p style={{fontSize:12,color:"var(--muted)",marginTop:12,textAlign:"center"}}>
-                  Can't see your son's name? Message the coaches — they'll add him to the list.
+                  Cannot see your son's name? Message the coaches — they'll add him to the list.
                 </p>
               </>
             )
@@ -718,7 +734,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
         </div>
       </div>
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)",marginBottom:10,letterSpacing:"0.02em"}}>SELECT WEEK</div>
-      <div className="week-grid">
+      <div className="week-grid" style={{gridTemplateColumns:"repeat(8,1fr)"}}>
         {WEEKS.map((wk,i) => {
           const p2  = weekPts(wk,checks);
           const max = weekMaxPts(wk);
@@ -732,7 +748,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
           );
         })}
       </div>
-      <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} />
+      <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} showToast={showToast} />
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={onNav}>VIEW FULL 8-WEEK PLAN →</button>
 
       {/* Share your skills */}
@@ -740,7 +756,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
         <div style={{fontSize:24,marginBottom:6}}>📱🏑⚽</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,letterSpacing:"0.02em",marginBottom:6}}>SHARE YOUR SKILLS!</div>
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:10}}>
-          Filmed yourself practising? Send your videos to the coaches — we'd love to see the lads putting in the work!
+          Filmed yourself practising? Send your videos to the coaches — we would love to see the lads putting in the work!
         </div>
         <a href="mailto:fingallians2014boys@gmail.com" style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",fontWeight:900,padding:"8px 16px",borderRadius:20,textDecoration:"none"}}>
           📧 fingallians2014boys@gmail.com
@@ -754,7 +770,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
   );
 }
 
-function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player }) {
+function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToast }) {
   const [expandedSkill, setExpandedSkill] = useState(null);
   const [expandedSquad, setExpandedSquad] = useState(false);
   const [playingVideo, setPlayingVideo]   = useState(null);
@@ -796,7 +812,8 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player }) {
         return (
           <div key={s.id} className="skill-card" style={{borderLeft:"4px solid #7b1fa2"}}>
             <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>setExpandedSkill(open?null:s.id)}>
-              <div className={`skill-check${done?" done":""}`} style={done?{}:{borderColor:"#7b1fa2"}}>{done?"✓":""}</div>
+              <div className={`skill-check${done?" done":""}`} style={done?{}:{borderColor:"#7b1fa2",cursor:"pointer"}}
+                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
               <div className="skill-hd-text">
                 <div className="skill-type" style={{color:"#7b1fa2"}}>⚡ Speed Mechanics · +{PTS.speed} pts</div>
                 <div className="skill-name">{s.label}</div>
@@ -829,7 +846,8 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player }) {
         return (
           <div key={s.id} className="skill-card">
             <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>setExpandedSkill(open?null:s.id)}>
-              <div className={`skill-check${done?" done":""}`}>{done?"✓":""}</div>
+              <div className={`skill-check${done?" done":""}`} style={{cursor:"pointer"}}
+                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
               <div className="skill-hd-text">
                 <div className="skill-type">🎯 Solo Skill · +{PTS.skill} pts</div>
                 <div className="skill-name">{s.label}</div>
@@ -858,6 +876,8 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player }) {
         return (
           <div className="squad-card">
             <div className="squad-hd" onClick={()=>setExpandedSquad(v=>!v)}>
+              <div className={`skill-check${done?" done":""}`} style={{flexShrink:0,cursor:"pointer"}}
+                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
               <div className="squad-icon">👥</div>
               <div className="squad-hd-text">
                 <div className="squad-type">Squad Session · +{PTS.squad} pts</div>
@@ -916,7 +936,7 @@ function PlanTab({ checks, onToggle, player }) {
         const pct = Math.round((wP/wM)*100);
         return (
           <div key={i} style={{marginBottom:24}}>
-            <WeekDetail w={w} ps={ps} pct={pct} wPts={wP} wMax={wM} checks={checks} onToggle={onToggle} player={player} />
+            <WeekDetail w={w} ps={ps} pct={pct} wPts={wP} wMax={wM} checks={checks} onToggle={onToggle} player={player} showToast={showToast} />
           </div>
         );
       })}
@@ -1596,7 +1616,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
                               .update({ lap_time: null, updated_at: new Date().toISOString() })
                               .eq("player_id", p.id)
                               .eq("period", period));
-                            // error is fine if row doesn't exist — nothing to clear
+                            // error is fine if row does not exist — nothing to clear
                             error = null;
                           }
                           if (!error) {
