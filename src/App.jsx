@@ -496,7 +496,7 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "plan" && (
-          <PlanTab checks={checks} onToggle={toggleTask} player={player} />
+          <PlanTab checks={checks} onToggle={toggleTask} player={player} showToast={showToast} />
         )}
 
         {session && (player || isAdmin) && tab === "progress" && (
@@ -707,7 +707,7 @@ function LinkPlayerScreen({ onLink }) {
   );
 }
 
-function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle }) {
+function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast }) {
   const [activeWk, setActiveWk] = useState(0);
   const w = WEEKS[activeWk];
   const ps = PHASE_STYLE[w.phase];
@@ -923,7 +923,7 @@ function VideoEmbed({ ytId, playing, onPlay, dark }) {
   );
 }
 
-function PlanTab({ checks, onToggle, player }) {
+function PlanTab({ checks, onToggle, player, showToast }) {
   return (
     <div className="wk-detail">
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)",marginBottom:12,letterSpacing:"0.02em"}}>
