@@ -736,7 +736,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast })
         </div>
       </div>
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)",marginBottom:10,letterSpacing:"0.02em"}}>SELECT WEEK</div>
-      <div className="week-grid" style={{gridTemplateColumns:"repeat(8,1fr)"}}>
+      <div className="week-grid">
         {WEEKS.map((wk,i) => {
           const p2  = weekPts(wk,checks);
           const max = weekMaxPts(wk);
