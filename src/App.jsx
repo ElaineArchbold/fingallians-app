@@ -410,9 +410,9 @@ export default function App() {
 
   async function toggleTask(taskKey, pts, label) {
     if (!player) return;
-    // Block future weeks — extract week number from task key (w1-xxx, w2-xxx etc.)
+    // Block future weeks — super admin (e.t.archbold@gmail.com) can bypass this
     const weekMatch = taskKey.match(/^w(\d+)-/);
-    if (weekMatch) {
+    if (weekMatch && session?.user?.email !== SUPER_ADMIN_EMAIL) {
       const weekNum  = parseInt(weekMatch[1], 10);
       const weekStart = new Date("2026-06-29");
       weekStart.setDate(weekStart.getDate() + (weekNum - 1) * 7);
