@@ -813,9 +813,15 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
         const open = expandedSkill === s.id;
         return (
           <div key={s.id} className="skill-card" style={{borderLeft:"4px solid #7b1fa2"}}>
-            <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>setExpandedSkill(open?null:s.id)}>
+            <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>{
+              if(open && !done) showToast("💪 Don't forget to tap 'Mark Complete' if you have done this activity!");
+              setExpandedSkill(open?null:s.id);
+            }}>
               <div className={`skill-check${done?" done":""}`} style={done?{}:{borderColor:"#7b1fa2",cursor:"pointer"}}
-                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
+                onClick={e=>{e.stopPropagation();
+                  if(open && !done) showToast("💪 Don't forget to tap 'Mark Complete' if you have done this activity!");
+                  setExpandedSkill(open?null:s.id);
+                }}>{done?"✓":""}</div>
               <div className="skill-hd-text">
                 <div className="skill-type" style={{color:"#7b1fa2"}}>⚡ Speed Mechanics · +{PTS.speed} pts</div>
                 <div className="skill-name">{s.label}</div>
@@ -847,9 +853,15 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
         const open = expandedSkill === s.id;
         return (
           <div key={s.id} className="skill-card">
-            <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>setExpandedSkill(open?null:s.id)}>
+            <div className={`skill-hd${done?" done-hd":""}`} onClick={()=>{
+              if(open && !done) showToast("💪 Don't forget to tap 'Mark Complete' if you have done this activity!");
+              setExpandedSkill(open?null:s.id);
+            }}>
               <div className={`skill-check${done?" done":""}`} style={{cursor:"pointer"}}
-                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
+                onClick={e=>{e.stopPropagation();
+                  if(open && !done) showToast("💪 Don't forget to tap 'Mark Complete' if you have done this activity!");
+                  setExpandedSkill(open?null:s.id);
+                }}>{done?"✓":""}</div>
               <div className="skill-hd-text">
                 <div className="skill-type">🎯 Solo Skill · +{PTS.skill} pts</div>
                 <div className="skill-name">{s.label}</div>
@@ -877,9 +889,15 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
         const done = !!checks[k];
         return (
           <div className="squad-card">
-            <div className="squad-hd" onClick={()=>setExpandedSquad(v=>!v)}>
+            <div className="squad-hd" onClick={()=>{
+              if(expandedSquad && !done) showToast("💪 Don't forget to tap 'Squad Session Done' if you have completed this!");
+              setExpandedSquad(v=>!v);
+            }}>
               <div className={`skill-check${done?" done":""}`} style={{flexShrink:0,cursor:"pointer"}}
-                onClick={e=>{e.stopPropagation();showToast("ℹ️ Open the activity and mark it complete inside the accordion")}}>{done?"✓":""}</div>
+                onClick={e=>{e.stopPropagation();
+                  if(expandedSquad && !done) showToast("💪 Don't forget to tap 'Squad Session Done' if you have completed this!");
+                  setExpandedSquad(v=>!v);
+                }}>{done?"✓":""}</div>
               <div className="squad-icon">👥</div>
               <div className="squad-hd-text">
                 <div className="squad-type">Squad Session · +{PTS.squad} pts</div>
