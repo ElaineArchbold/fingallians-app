@@ -6,10 +6,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Admin accounts and their pre-linked child (optional — can also link via UI)
 const ADMIN_EMAILS = [
   "e.t.archbold@gmail.com",
-  "seangallagher2506@gmail.com",
-  "dodplumbing@gmail.com",
-  "sokelly123@gmail.com",
-  "rtrappe@gmail.com",
+  
 ];
 const SUPER_ADMIN_EMAIL = "e.t.archbold@gmail.com";
 
@@ -458,8 +455,8 @@ export default function App() {
     { id:"home",    label:"Home"     },
     { id:"plan",    label:"Plan"     },
     { id:"progress",label:"Progress" },
-    ...(isAdmin ? [{ id:"coaches", label:"Coaches" }] : []),
-    ...(isAdmin ? [{ id:"admin",   label:"Admin"   }] : []),
+     ...(isSuperAdmin ? [{ id:"coaches", label:"Coaches" }] : []),
+    ...(isSuperAdmin ? [{ id:"admin",   label:"Admin"   }] : []),
     ...(isSuperAdmin ? [{ id:"dashboard", label:"Dashboard" }] : []),
   ];
 
@@ -593,7 +590,7 @@ function AuthScreen({ showToast }) {
         <div className="crest-large"><img src={LOGO} alt="Fingallians GAA" /></div>
         <h2>SUMMER FITNESS CHALLENGE</h2>
         <p>June–August 2026 · 8 Weeks<br/>Runs · Skills · Squad Sessions</p>
-        <div className="pill">🏆 Prize for Most Improved Player</div>
+  
       </div>
       <div className="card">
         <div className="card-hd">
@@ -1286,10 +1283,7 @@ function ProgressTab({ player, checks, isAdmin }) {
         })}
       </div>
 
-      <div style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:14,lineHeight:1.7}}>
-        🏆 Most Improved Player prize at end of summer<br/>
-        Keep logging to stay in the running!
-      </div>
+      
     </div>
   );
 }
@@ -1393,10 +1387,7 @@ function ScoresTab() {
         );
       })}
 
-      <div style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:16,lineHeight:1.7}}>
-        🏆 Most Improved Player prize awarded at end of summer<br/>
-        based on skills assessment before &amp; after the challenge
-      </div>
+      
     </div>
   );
 }
