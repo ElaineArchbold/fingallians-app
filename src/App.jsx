@@ -9,6 +9,7 @@ const ADMIN_EMAILS = [
   
 ];
 const SUPER_ADMIN_EMAIL = "e.t.archbold@gmail.com";
+const FORMSPREE_URL     = "https://formspree.io/f/mrewqpqo";
 
 // Admin accounts that should be auto-linked to a player by name
 const ADMIN_PLAYER_NAMES = {
@@ -37,7 +38,7 @@ async function logAudit(userEmail, player, action, detail, oldValue = null, newV
 }
 
 
-const LOGO = "data:image/png;base64,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";
+const LOGO = "data:image/jpeg;base64,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"";
 
 const WEEKS = [
   {
@@ -343,6 +344,7 @@ export default function App() {
   const [player, setPlayer]     = useState(null);
   const [checks, setChecks]     = useState({});
   const [allPlayers, setAllPlayers] = useState([]);
+  const [playerLoaded, setPlayerLoaded] = useState(false);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -359,45 +361,40 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) { setPlayer(null); setChecks({}); return; }
+    if (!session) { setPlayer(null); setChecks({}); setPlayerLoaded(false); return; }
+    if (ADMIN_EMAILS.includes(session.user.email)) { setPlayerLoaded(true); loadAllPlayers(); return; }
+    setPlayerLoaded(false);
     loadPlayerData();
-    if (ADMIN_EMAILS.includes(session.user.email)) loadAllPlayers();
   }, [session]);
 
   async function loadPlayerData() {
-    const { data: link } = await sb
-      .from("parent_players")
-      .select("player_id, players(id,name)")
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-    if (link?.players) {
-      setPlayer(link.players);
-      const { data: comps } = await sb
-        .from("task_completions")
-        .select("task_key")
-        .eq("player_id", link.players.id);
-      const c = {};
-      comps?.forEach(r => { c[r.task_key] = true; });
-      setChecks(c);
-    } else {
-      // Auto-link admin accounts that have a mapped player name
-      const mappedName = ADMIN_PLAYER_NAMES[session.user.email];
-      if (mappedName) {
-        const { data: found } = await sb
+    try {
+      const { data: link } = await sb
+        .from("parent_players")
+        .select("player_id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (link?.player_id) {
+        const { data: playerData } = await sb
           .from("players")
-          .select("id,name")
-          .ilike("name", mappedName)
+          .select("id, name")
+          .eq("id", link.player_id)
           .maybeSingle();
-        if (found) {
-          await sb.from("parent_players").upsert({ user_id: session.user.id, player_id: found.id }, { onConflict:"user_id,player_id" });
-          setPlayer(found);
-          const { data: comps } = await sb.from("task_completions").select("task_key").eq("player_id", found.id);
+        if (playerData) {
+          setPlayer(playerData);
+          const { data: comps } = await sb
+            .from("task_completions")
+            .select("task_key")
+            .eq("player_id", playerData.id);
           const c = {};
           comps?.forEach(r => { c[r.task_key] = true; });
           setChecks(c);
         }
       }
+    } catch(e) {
+      console.error("loadPlayerData error:", e);
     }
+    setPlayerLoaded(true);
   }
 
   async function loadAllPlayers() {
@@ -433,12 +430,14 @@ export default function App() {
   }
 
   async function linkPlayer(playerId) {
-    // Upsert so two parents linking the same child never causes a duplicate error
-    await sb.from("parent_players")
-      .upsert({ user_id: session.user.id, player_id: playerId }, { onConflict:"user_id,player_id" });
-    await loadPlayerData();
-    showToast("🎉 Player linked!");
-    setTab("home");
+    try {
+      await sb.from("parent_players")
+        .upsert({ user_id: session.user.id, player_id: playerId }, { onConflict: "user_id" });
+      showToast("🎉 Player linked! Loading your dashboard…");
+      setTimeout(() => window.location.reload(), 1500);
+    } catch(e) {
+      showToast("❌ Something went wrong — please try again.");
+    }
   }
 
   const isAdmin      = ADMIN_EMAILS.includes(session?.user?.email);
@@ -455,7 +454,6 @@ export default function App() {
     { id:"home",    label:"Home"     },
     { id:"plan",    label:"Plan"     },
     { id:"progress",label:"Progress" },
-     ...(isSuperAdmin ? [{ id:"coaches", label:"Coaches" }] : []),
     ...(isSuperAdmin ? [{ id:"admin",   label:"Admin"   }] : []),
     ...(isSuperAdmin ? [{ id:"dashboard", label:"Dashboard" }] : []),
   ];
@@ -470,7 +468,7 @@ export default function App() {
               <div className="crest"><img src={LOGO} alt="Fingallians GAA crest" /></div>
               <div>
                 <div className="hdr-title">FINGALLIANS GAA</div>
-                <div className="hdr-sub">2014 Boys · Summer Challenge 2026</div>
+                <div className="hdr-sub">Fingallians 2014 Boys · Summer Challenge 2026</div>
                 {player && <div className="hdr-player">👤 {player.name} · {pts} pts</div>}
               </div>
             </div>
@@ -485,8 +483,10 @@ export default function App() {
         )}
 
         {!session && <AuthScreen showToast={showToast} />}
-
-        {session && !player && !isAdmin && (
+        {session && !playerLoaded && !isAdmin && (
+          <div className="loader"><div className="spinner"/>Loading…</div>
+        )}
+        {session && playerLoaded && !player && !isAdmin && (
           <LinkPlayerScreen userId={session.user.id} onLink={linkPlayer} showToast={showToast} />
         )}
 
@@ -500,10 +500,6 @@ export default function App() {
 
         {session && (player || isAdmin) && tab === "progress" && (
           <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
-        )}
-
-        {session && isAdmin && tab === "coaches" && (
-          <CoachesTab allPlayers={allPlayers} coachEmail={session.user.email} showToast={showToast} />
         )}
 
         {session && isAdmin && tab === "admin" && (
@@ -531,6 +527,19 @@ function AuthScreen({ showToast }) {
   const [showPw2, setShowPw2]         = useState(false);
   const [tcAgreed, setTcAgreed]       = useState(false);
   const [showTc, setShowTc]           = useState(false);
+    const [resetSent, setResetSent]     = useState(false);
+
+  async function sendReset() {
+    if (!email.trim()) { setErr("Please enter your email address first."); return; }
+    setBusy(true); setErr("");
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+    if (error) { setErr(error.message); setBusy(false); return; }
+    setResetSent(true);
+    setBusy(false);
+  }
+
+
+  const redirectUrl = "https://fingallians-app.vercel.app";
 
   async function submit() {
     setErr(""); setBusy(true);
@@ -643,6 +652,17 @@ function AuthScreen({ showToast }) {
           <button className="btn btn-green" onClick={submit} disabled={busy}>
             {busy ? "…" : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
           </button>
+          {mode === "login" && (
+            <div style={{textAlign:"center",marginTop:10}}>
+              {resetSent ? (
+                <div style={{fontSize:13,color:"#2e7d32",padding:"8px 0"}}>✅ Reset email sent — check your inbox!</div>
+              ) : (
+                <button className="link-btn" onClick={sendReset} disabled={busy} style={{fontSize:13,color:"var(--muted)"}}>
+                  Forgot password?
+                </button>
+              )}
+            </div>
+          )}
           <div className="divider" style={{marginTop:16}}>{mode==="login"?"No account yet?":"Already registered?"}</div>
           <div style={{textAlign:"center",marginTop:10}}>
             <button className="link-btn" onClick={()=>{setMode(m=>m==="login"?"signup":"login");setErr("")}}>
@@ -706,6 +726,125 @@ function LinkPlayerScreen({ onLink }) {
   );
 }
 
+// ── Contact Form component ────────────────────────────────────────────────────
+function ContactForm({ player }) {
+  const [open,    setOpen]    = useState(false);
+  const [msg,     setMsg]     = useState("");
+  const [file,    setFile]    = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+  const [err,     setErr]     = useState("");
+  const fileRef = useRef(null);
+
+  async function handleSubmit() {
+    if (!msg.trim()) { setErr("Please add a message before sending."); return; }
+    setSending(true); setErr("");
+    try {
+      const formData = new FormData();
+      formData.append("player_name", player?.name || "Unknown");
+      formData.append("squad", "Fingallians 2014 Boys");
+      formData.append("message", msg);
+      if (file) formData.append("attachment", file);
+      const res = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        body: formData,
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        setSent(true); setMsg(""); setFile(null);
+        setTimeout(() => { setSent(false); setOpen(false); }, 3000);
+      } else {
+        setErr("Something went wrong — please try again.");
+      }
+    } catch {
+      setErr("Could not send — check your connection.");
+    }
+    setSending(false);
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",
+                fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",
+                fontWeight:900,padding:"10px 20px",borderRadius:20,border:"none",cursor:"pointer"}}>
+        📧 Message the Coaches
+      </button>
+    );
+  }
+
+  return (
+    <div style={{background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"16px",marginTop:4,textAlign:"left"}}>
+      {sent ? (
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:36,marginBottom:8}}>✅</div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,color:"var(--gold)",letterSpacing:"0.02em"}}>Message Sent!</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.8)",marginTop:6}}>The coaches will get back to you soon.</div>
+        </div>
+      ) : (
+        <>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"white",letterSpacing:"0.02em"}}>MESSAGE THE COACHES</div>
+            <button onClick={() => { setOpen(false); setErr(""); setMsg(""); setFile(null); }}
+              style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:"50%",
+                      width:28,height:28,cursor:"pointer",color:"white",fontSize:16,
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>
+          {player && (
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",marginBottom:12}}>
+              Sending as: <strong style={{color:"var(--gold)"}}>{player.name}</strong>
+            </div>
+          )}
+          {err && (
+            <div style={{background:"rgba(255,0,0,0.15)",borderRadius:8,padding:"8px 12px",
+                         fontSize:12,color:"#ffcccc",marginBottom:10}}>{err}</div>
+          )}
+          <textarea
+            placeholder="Write your message here — share a video link, ask a question, or let the coaches know how you're getting on!"
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            rows={4}
+            style={{width:"100%",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",
+                    borderRadius:10,padding:"10px 12px",fontSize:13,color:"white",
+                    fontFamily:"'Lato',sans-serif",resize:"vertical",outline:"none",
+                    boxSizing:"border-box",marginBottom:10}}
+          />
+          <div style={{marginBottom:12}}>
+            <input type="file" ref={fileRef} accept="image/*,video/*"
+              onChange={e => setFile(e.target.files[0])}
+              style={{display:"none"}} />
+            <button onClick={() => fileRef.current.click()}
+              style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.25)",
+                      borderRadius:10,padding:"8px 14px",color:"white",fontSize:12,
+                      cursor:"pointer",fontFamily:"'Lato',sans-serif",fontWeight:700}}>
+              📎 {file ? file.name : "Attach a photo or video"}
+            </button>
+            {file && (
+              <button onClick={() => setFile(null)}
+                style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",
+                        cursor:"pointer",fontSize:12,marginLeft:8}}>
+                Remove
+              </button>
+            )}
+          </div>
+          <button onClick={handleSubmit} disabled={sending}
+            style={{width:"100%",background:"var(--gold)",color:"var(--dark)",border:"none",
+                    borderRadius:10,padding:"12px",fontFamily:"'Barlow Condensed',sans-serif",
+                    fontSize:20,letterSpacing:"0.04em",cursor:sending?"not-allowed":"pointer",
+                    opacity:sending?0.7:1,fontWeight:900}}>
+            {sending ? "Sending…" : "SEND MESSAGE →"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Keep for any legacy references
+function EmailCoachesButton({ label = "📧 Message the Coaches", player }) {
+  return <ContactForm player={player} />;
+}
+
 function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast }) {
   const [activeWk, setActiveWk] = useState(0);
   const w = WEEKS[activeWk];
@@ -757,9 +896,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast })
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:10}}>
           Filmed yourself practising? Send your videos to the coaches — we would love to see the lads putting in the work!
         </div>
-        <a href="mailto:fingallians2014boys@gmail.com" style={{display:"inline-block",background:"var(--gold)",color:"var(--dark)",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.04em",fontWeight:900,padding:"8px 16px",borderRadius:20,textDecoration:"none"}}>
-          📧 fingallians2014boys@gmail.com
-        </a>
+        <ContactForm player={player} />
       </div>
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
@@ -924,7 +1061,6 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
 
 function VideoEmbed({ ytId, playing, onPlay, dark }) {
   const isPlaceholder = !ytId || ytId.startsWith("Demo");
-  // YouTube provides thumbnails at a predictable URL — hqdefault is reliable for all videos
   const thumbUrl = ytId && !isPlaceholder
     ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
     : null;
@@ -993,16 +1129,11 @@ function PlanTab({ checks, onToggle, player, showToast }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SCORES TAB — leaderboard visible to all logged-in users
-// ══════════════════════════════════════════════════════════════════════════════
 // ── ProgressTab ───────────────────────────────────────────────────────────────
-// Shows the logged-in player's own progress: KMs run + skills practised per week
 function ProgressTab({ player, checks, isAdmin }) {
-  const [completions, setCompletions] = useState([]); // [{task_key, completed_at}]
+  const [completions, setCompletions] = useState([]);
   const [loading, setLoading]         = useState(true);
 
-  // Fetch completions WITH timestamps for this player
   useEffect(() => {
     if (!player) { setLoading(false); return; }
     sb.from("task_completions")
@@ -1015,16 +1146,10 @@ function ProgressTab({ player, checks, isAdmin }) {
       });
   }, [player?.id]);
 
-  // ── Derived stats ──────────────────────────────────────────
   const stats = useMemo(() => {
     let sessions = 0, minutes = 0, pts = 0;
     let totalKm = 0;
-
-    // minutes per activity type (from desc text or fixed values)
-    const runMins   = 20;  // average per run
-    const skillMins = 20;  // average per skill session
-    const squadMins = 20;  // squad session
-
+    const runMins = 20, skillMins = 20, squadMins = 20;
     WEEKS.forEach(w => {
       w.runs.forEach((r, i) => {
         if (checks[runKey(w.week, i)]) {
@@ -1033,75 +1158,52 @@ function ProgressTab({ player, checks, isAdmin }) {
         }
       });
       w.skills.forEach(s => {
-        if (checks[skillKey(w.week, s.id)]) {
-          sessions++; minutes += skillMins; pts += PTS.skill;
-        }
+        if (checks[skillKey(w.week, s.id)]) { sessions++; minutes += skillMins; pts += PTS.skill; }
       });
       w.speed.forEach(s => {
-        if (checks[speedKey(w.week, s.id)]) {
-          sessions++; minutes += 10; pts += PTS.speed;
-        }
+        if (checks[speedKey(w.week, s.id)]) { sessions++; minutes += 10; pts += PTS.speed; }
       });
-      if (checks[squadKey(w.week)]) {
-        sessions++; minutes += squadMins; pts += PTS.squad;
-      }
+      if (checks[squadKey(w.week)]) { sessions++; minutes += squadMins; pts += PTS.squad; }
     });
     return { sessions, minutes, pts, totalKm };
   }, [checks]);
 
-  // ── Weekly activity for bar chart ─────────────────────────
   const weeklyData = useMemo(() => {
     return WEEKS.map(w => {
       let runs = 0, skills = 0, speed = 0, squad = 0;
-      w.runs.forEach((_, i) => { if (checks[runKey(w.week, i)])   runs++; });
-      w.skills.forEach(s    => { if (checks[skillKey(w.week, s.id)]) skills++; });
-      w.speed.forEach(s     => { if (checks[speedKey(w.week, s.id)]) speed++; });
+      w.runs.forEach((_, i) => { if (checks[runKey(w.week, i)]) runs++; });
+      w.skills.forEach(s => { if (checks[skillKey(w.week, s.id)]) skills++; });
+      w.speed.forEach(s => { if (checks[speedKey(w.week, s.id)]) speed++; });
       if (checks[squadKey(w.week)]) squad = 1;
-      const total   = runs + skills + speed + squad;
+      const total = runs + skills + speed + squad;
       const maxPoss = w.runs.length + w.skills.length + w.speed.length + 1;
       return { week: w.week, runs, skills, speed, squad, total, maxPoss };
     });
   }, [checks]);
 
-  // ── Activity log — map task_key → human label + date ──────
   const activityLog = useMemo(() => {
     return completions.map(c => {
       const k = c.task_key;
       let label = "", type = "other", week = null;
-
       WEEKS.forEach(w => {
         w.runs.forEach((r, i) => {
-          if (runKey(w.week, i) === k) {
-            label = `${r.label} (${r.distance})`;
-            type  = "run"; week = w.week;
-          }
+          if (runKey(w.week, i) === k) { label = `${r.label} (${r.distance})`; type = "run"; week = w.week; }
         });
         w.skills.forEach(s => {
-          if (skillKey(w.week, s.id) === k) {
-            label = s.label.replace(/^[^\w]+/, "").split(":")[0].trim();
-            type  = "skill"; week = w.week;
-          }
+          if (skillKey(w.week, s.id) === k) { label = s.label.replace(/^[^\w]+/, "").split(":")[0].trim(); type = "skill"; week = w.week; }
         });
         w.speed.forEach(s => {
-          if (speedKey(w.week, s.id) === k) {
-            label = s.label.replace(/^[^\w]+/, "").split(":")[0].trim();
-            type  = "speed"; week = w.week;
-          }
+          if (speedKey(w.week, s.id) === k) { label = s.label.replace(/^[^\w]+/, "").split(":")[0].trim(); type = "speed"; week = w.week; }
         });
-        if (squadKey(w.week) === k) {
-          label = `Squad Session`; type = "squad"; week = w.week;
-        }
+        if (squadKey(w.week) === k) { label = `Squad Session`; type = "squad"; week = w.week; }
       });
-
       const date = c.completed_at
         ? new Date(c.completed_at).toLocaleDateString("en-IE", { day:"numeric", month:"short", year:"numeric" })
         : null;
-
       return { label, type, week, date, key: k };
-    }).filter(a => a.label); // skip any unrecognised keys
+    }).filter(a => a.label);
   }, [completions]);
 
-  // ── Colour + icon per type ─────────────────────────────────
   const typeStyle = {
     run:   { color:"var(--g)",  bg:"var(--g3)",  icon:"🏃" },
     skill: { color:"#2e7d32",   bg:"#e8f5e9",    icon:"🏑" },
@@ -1120,8 +1222,6 @@ function ProgressTab({ player, checks, isAdmin }) {
 
   return (
     <div className="home-wrap">
-
-      {/* ── Player banner ── */}
       <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
                    padding:"16px 18px",marginBottom:14,color:"#fff",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-8,bottom:-10,fontSize:70,opacity:0.07}}>🏃</div>
@@ -1130,43 +1230,30 @@ function ProgressTab({ player, checks, isAdmin }) {
         </div>
         <div style={{fontSize:11,opacity:0.65,marginTop:2}}>Fingallians 2014 · Summer Challenge 2026</div>
         {isAdmin && (
-          <div style={{fontSize:10,marginTop:4,background:"rgba(255,255,255,.12)",
-                       display:"inline-block",padding:"2px 8px",borderRadius:10,
-                       color:"rgba(255,255,255,.75)"}}>
+          <div style={{fontSize:10,marginTop:4,background:"rgba(255,255,255,.12)",display:"inline-block",padding:"2px 8px",borderRadius:10,color:"rgba(255,255,255,.75)"}}>
             👁 Viewing as admin
           </div>
         )}
       </div>
 
-      {/* ── 3 stat boxes ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16,width:"100%"}}>
         {[
-          { label:"Sessions\nLogged",    value: stats.sessions, suffix:"",     color:"var(--g)",  icon:"✅" },
-          { label:"Minutes\nActive",     value: stats.minutes,  suffix:" min", color:"#2e7d32",   icon:"⏱" },
-          { label:"Total\nPoints",       value: stats.pts,      suffix:" pts", color:"#b8860b",   icon:"⭐" },
+          { label:"Sessions\nLogged", value: stats.sessions, suffix:"",     color:"var(--g)", icon:"✅" },
+          { label:"Minutes\nActive",  value: stats.minutes,  suffix:" min", color:"#2e7d32",  icon:"⏱" },
+          { label:"Total\nPoints",    value: stats.pts,      suffix:" pts", color:"#b8860b",  icon:"⭐" },
         ].map(s => (
-          <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 8px",
-                                     textAlign:"center",border:"1px solid #f0dede"}}>
+          <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 8px",textAlign:"center",border:"1px solid #f0dede"}}>
             <div style={{fontSize:20}}>{s.icon}</div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,
-                         color:s.color,lineHeight:1,marginTop:4}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,color:s.color,lineHeight:1,marginTop:4}}>
               {s.value}{s.suffix}
             </div>
-            <div style={{fontSize:10,color:"var(--muted)",marginTop:3,
-                         whiteSpace:"pre-line",lineHeight:1.3}}>
-              {s.label}
-            </div>
+            <div style={{fontSize:10,color:"var(--muted)",marginTop:3,whiteSpace:"pre-line",lineHeight:1.3}}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Weekly activity bar chart ── */}
-      <div style={{background:"white",borderRadius:14,padding:"14px",marginBottom:14,
-                   border:"1px solid #f0dede",width:"100%"}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                     letterSpacing:"0.04em",marginBottom:12}}>WEEKLY ACTIVITY</div>
-
-        {/* Legend */}
+      <div style={{background:"white",borderRadius:14,padding:"14px",marginBottom:14,border:"1px solid #f0dede",width:"100%"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:12}}>WEEKLY ACTIVITY</div>
         <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap"}}>
           {[["var(--g)","Runs"],["#2e7d32","Skills"],["#7b1fa2","Speed"],["#c45e00","Squad"]].map(([c,l]) => (
             <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
@@ -1175,115 +1262,63 @@ function ProgressTab({ player, checks, isAdmin }) {
             </div>
           ))}
         </div>
-
-        {/* Bars */}
         <div style={{display:"flex",gap:4,alignItems:"flex-end",height:80}}>
           {weeklyData.map(w => {
-            const barH    = Math.max((w.total / maxWeekActivity) * 72, w.total > 0 ? 4 : 0);
-            const runH    = (w.runs   / w.total || 0) * barH;
-            const skillH  = (w.skills / w.total || 0) * barH;
-            const speedH  = (w.speed  / w.total || 0) * barH;
-            const squadH  = (w.squad  / w.total || 0) * barH;
+            const barH   = Math.max((w.total / maxWeekActivity) * 72, w.total > 0 ? 4 : 0);
+            const runH   = (w.runs   / w.total || 0) * barH;
+            const skillH = (w.skills / w.total || 0) * barH;
+            const speedH = (w.speed  / w.total || 0) * barH;
+            const squadH = (w.squad  / w.total || 0) * barH;
             const allDone = w.total === w.maxPoss;
             return (
               <div key={w.week} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                {/* Stacked bar */}
-                <div style={{width:"100%",display:"flex",flexDirection:"column",
-                             justifyContent:"flex-end",height:72,gap:1}}>
-                  {w.squad > 0 && (
-                    <div style={{width:"100%",height:Math.max(squadH,2),background:"#c45e00",
-                                 borderRadius:"2px 2px 0 0",minHeight:3}}/>
-                  )}
-                  {w.speed > 0 && (
-                    <div style={{width:"100%",height:Math.max(speedH,2),background:"#7b1fa2",minHeight:3}}/>
-                  )}
-                  {w.skills > 0 && (
-                    <div style={{width:"100%",height:Math.max(skillH,2),background:"#2e7d32",minHeight:3}}/>
-                  )}
-                  {w.runs > 0 && (
-                    <div style={{width:"100%",height:Math.max(runH,2),background:"var(--g)",
-                                 borderRadius: w.skills === 0 && w.squad === 0 ? "2px 2px 0 0" : 0,
-                                 minHeight:3}}/>
-                  )}
-                  {w.total === 0 && (
-                    <div style={{width:"100%",height:3,background:"#f0dede",borderRadius:2}}/>
-                  )}
+                <div style={{width:"100%",display:"flex",flexDirection:"column",justifyContent:"flex-end",height:72,gap:1}}>
+                  {w.squad > 0 && <div style={{width:"100%",height:Math.max(squadH,2),background:"#c45e00",borderRadius:"2px 2px 0 0",minHeight:3}}/>}
+                  {w.speed > 0 && <div style={{width:"100%",height:Math.max(speedH,2),background:"#7b1fa2",minHeight:3}}/>}
+                  {w.skills > 0 && <div style={{width:"100%",height:Math.max(skillH,2),background:"#2e7d32",minHeight:3}}/>}
+                  {w.runs > 0 && <div style={{width:"100%",height:Math.max(runH,2),background:"var(--g)",borderRadius:w.skills===0&&w.squad===0?"2px 2px 0 0":0,minHeight:3}}/>}
+                  {w.total === 0 && <div style={{width:"100%",height:3,background:"#f0dede",borderRadius:2}}/>}
                 </div>
-                {/* Week label */}
-                <div style={{fontSize:9,color: allDone ? "var(--g)" : "var(--muted)",
-                             fontWeight: allDone ? 700 : 400}}>
-                  W{w.week}{allDone ? "✓" : ""}
+                <div style={{fontSize:9,color:allDone?"var(--g)":"var(--muted)",fontWeight:allDone?700:400}}>
+                  W{w.week}{allDone?"✓":""}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* KM total */}
         {stats.totalKm > 0 && (
-          <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f0e8e8",
-                       display:"flex",alignItems:"center",gap:6}}>
+          <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f0e8e8",display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:18}}>🏃</span>
             <div>
-              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,
-                            color:"var(--g)",fontWeight:700}}>{stats.totalKm.toFixed(1)} km</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,color:"var(--g)",fontWeight:700}}>{stats.totalKm.toFixed(1)} km</span>
               <span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>total distance run</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Activity log ── */}
-      <div style={{background:"white",borderRadius:14,padding:"14px",
-                   border:"1px solid #f0dede",width:"100%"}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                     letterSpacing:"0.04em",marginBottom:12}}>ACTIVITY LOG</div>
-
-        {loading && (
-          <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>Loading…</div>
-        )}
-
+      <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",width:"100%"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:12}}>ACTIVITY LOG</div>
+        {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>Loading…</div>}
         {!loading && activityLog.length === 0 && (
-          <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>
-            No sessions logged yet — get out there! 🏃
-          </div>
+          <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>No sessions logged yet — get out there! 🏃</div>
         )}
-
         {!loading && activityLog.map((a, i) => {
           const ts = typeStyle[a.type] || typeStyle.skill;
           return (
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,
-                                  padding:"9px 0",
-                                  borderBottom: i < activityLog.length-1 ? "1px solid #f8f0f0" : "none"}}>
-              {/* Icon badge */}
-              <div style={{width:32,height:32,borderRadius:"50%",background:ts.bg,
-                           display:"flex",alignItems:"center",justifyContent:"center",
-                           fontSize:16,flexShrink:0}}>
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<activityLog.length-1?"1px solid #f8f0f0":"none"}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:ts.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
                 {ts.icon}
               </div>
-              {/* Label + week */}
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:600,color:"var(--dark)",lineHeight:1.3}}>
-                  {a.label}
-                </div>
-                {a.week && (
-                  <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>
-                    Week {a.week}
-                  </div>
-                )}
+                <div style={{fontSize:13,fontWeight:600,color:"var(--dark)",lineHeight:1.3}}>{a.label}</div>
+                {a.week && <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>Week {a.week}</div>}
               </div>
-              {/* Date */}
-              {a.date && (
-                <div style={{fontSize:11,color:"var(--muted)",textAlign:"right",flexShrink:0}}>
-                  {a.date}
-                </div>
-              )}
+              {a.date && <div style={{fontSize:11,color:"var(--muted)",textAlign:"right",flexShrink:0}}>{a.date}</div>}
             </div>
           );
         })}
       </div>
-
-      
     </div>
   );
 }
@@ -1297,8 +1332,7 @@ function CoachesTab({ allPlayers, coachEmail, showToast }) {
   ];
   return (
     <div className="admin-wrap">
-      <div style={{display:"flex",borderRadius:10,overflow:"hidden",
-                   border:"2px solid #a31621",marginBottom:16}}>
+      <div style={{display:"flex",borderRadius:10,overflow:"hidden",border:"2px solid #a31621",marginBottom:16}}>
         {subTabs.map(t => (
           <button key={t.id} onClick={() => setSub(t.id)} style={{
             flex:1, padding:"9px 6px", border:"none", cursor:"pointer",
@@ -1316,7 +1350,7 @@ function CoachesTab({ allPlayers, coachEmail, showToast }) {
   );
 }
 
-// ── ScoresTab (Leaderboard — admin only) ──────────────────────────────────────
+// ── ScoresTab ──────────────────────────────────────────────────────────────────
 function ScoresTab() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1332,9 +1366,7 @@ function ScoresTab() {
         statsMap[r.player_id][r.task_key] = true;
       });
       const rows = players.map(p => ({
-        id: p.id,
-        name: p.name,
-        pts: totalPts(statsMap[p.id] || {}),
+        id: p.id, name: p.name, pts: totalPts(statsMap[p.id] || {}),
       })).sort((a,b) => b.pts - a.pts);
       setLeaderboard(rows);
       setLoading(false);
@@ -1353,27 +1385,16 @@ function ScoresTab() {
         <div style={{fontSize:12,opacity:0.75,marginTop:4}}>Fingallians 2014 Boys · Summer Challenge 2026</div>
         <div style={{fontSize:11,opacity:0.6,marginTop:4}}>Updates live as sessions are logged</div>
       </div>
-
       {loading ? (
         <div className="loader"><div className="spinner"/>Loading scores…</div>
       ) : leaderboard.length === 0 ? (
         <div className="empty"><div className="icon">🏑</div><p>No scores yet — get logging!</p></div>
       ) : leaderboard.map((p, i) => {
-        const pct   = Math.round((p.pts / maxPossible) * 100);
+        const pct = Math.round((p.pts / maxPossible) * 100);
         return (
-          <div key={p.id} style={{
-            display:"flex",alignItems:"center",gap:12,
-            background:"white",
-            border:"2px solid transparent",
-            borderRadius:14,padding:"12px 14px",marginBottom:8,
-            boxShadow:"0 2px 10px rgba(163,22,33,0.08)"
-          }}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,width:32,textAlign:"center",flexShrink:0}}>
-              {rankEmoji(i)}
-            </div>
-            <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,flexShrink:0}}>
-              {p.name[0]}
-            </div>
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:12,background:"white",border:"2px solid transparent",borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 10px rgba(163,22,33,0.08)"}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,width:32,textAlign:"center",flexShrink:0}}>{rankEmoji(i)}</div>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,flexShrink:0}}>{p.name[0]}</div>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:15}}>{p.name}</div>
               <div style={{height:4,background:"#f0dede",borderRadius:2,marginTop:5,overflow:"hidden"}}>
@@ -1386,24 +1407,17 @@ function ScoresTab() {
           </div>
         );
       })}
-
-      
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ADMIN TAB
-// ══════════════════════════════════════════════════════════════════════════════
-// ─── Fitness Testing Component ────────────────────────────────────────────────
-// ── Helpers shared across fitness components ──────────────────────────────────
+// ── Fitness helpers ────────────────────────────────────────────────────────────
 function fmtTime(s) {
   if (!s && s !== 0) return "—";
   const m = Math.floor(s / 60), sec = s % 60;
   return `${m}:${String(sec).padStart(2,"0")}`;
 }
 function parseTime(val) {
-  // Accept m:ss, mm:ss, or raw seconds
   const v = val.trim();
   if (!v) return null;
   if (v.includes(":")) {
@@ -1417,9 +1431,9 @@ function parseTime(val) {
   return n > 0 ? n : null;
 }
 
+const entriesRef = { current: {} };
+
 // ── FitnessTab ────────────────────────────────────────────────────────────────
-// Unified view: one card per player with times + accordion for football/hurling notes.
-// Two sub-views: "entry" (type times for whole squad) and "results" (ranked table).
 function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [period,   setPeriod]   = useState("pre");
   const [testDate, setTestDate] = useState(new Date().toISOString().slice(0,10));
@@ -1431,9 +1445,8 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
   const [ptsMap,   setPtsMap]   = useState({});
-  const lapDebounce = useRef({});  // { [pid]: timeoutId }
+  const lapDebounce = useRef({});
 
-  // Load fitness + coach notes together
   useEffect(() => {
     if (!allPlayers.length) return;
     setLoading(true);
@@ -1443,35 +1456,21 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       sb.from("coach_notes").select("*").in("player_id", ids),
       sb.from("task_completions").select("player_id,task_key").in("player_id", ids),
     ]).then(([{ data: ft }, { data: cn }, { data: comps }]) => {
-      // Seed entries
       const eMap = {};
       allPlayers.forEach(p => { eMap[p.id] = { lap: "", notes: "" }; });
-      ft?.forEach(r => {
-        eMap[r.player_id] = {
-          lap:   r.lap_time ? fmtTime(r.lap_time) : "",
-          notes: r.notes || "",
-        };
-      });
+      ft?.forEach(r => { eMap[r.player_id] = { lap: r.lap_time ? fmtTime(r.lap_time) : "", notes: r.notes || "" }; });
       setEntries(eMap);
       entriesRef.current = eMap;
 
-      // Seed coach notes
       const cMap = {};
-      allPlayers.forEach(p => {
-        cMap[p.id] = {
-          football: { myNote: "", saved: [] },
-          hurling:  { myNote: "", saved: [] },
-        };
-      });
+      allPlayers.forEach(p => { cMap[p.id] = { football: { myNote: "", saved: [] }, hurling: { myNote: "", saved: [] } }; });
       cn?.forEach(r => {
         if (!cMap[r.player_id]) return;
-        const sport = r.sport;
-        cMap[r.player_id][sport].saved.push(r);
-        if (r.coach_email === coachEmail) cMap[r.player_id][sport].myNote = r.note || "";
+        cMap[r.player_id][r.sport].saved.push(r);
+        if (r.coach_email === coachEmail) cMap[r.player_id][r.sport].myNote = r.note || "";
       });
       setCnotes(cMap);
 
-      // Calculate pts per player from task_completions
       const statsMap = {};
       comps?.forEach(r => {
         if (!statsMap[r.player_id]) statsMap[r.player_id] = {};
@@ -1480,7 +1479,6 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
       const pm = {};
       ids.forEach(id => { pm[id] = totalPts(statsMap[id] || {}); });
       setPtsMap(pm);
-
       setLoading(false);
     });
   }, [period, allPlayers, coachEmail]);
@@ -1495,37 +1493,25 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   function setCnoteField(pid, sport, val) {
     setCnotes(c => ({ ...c, [pid]: { ...c[pid], [sport]: { ...c[pid][sport], myNote: val } } }));
   }
-  function toggleAccordion(pid, sport) {
-    const key = pid + sport;
-    setOpen(o => ({ ...o, [key]: !o[key] }));
-  }
 
-  // Save notes for one player (lap time auto-saves on blur)
   async function savePlayer(pid) {
     setSaving(s => ({ ...s, [pid]: true }));
     const e  = entries[pid] || {};
     const cn = cnotes[pid]  || { football:{ myNote:"", saved:[] }, hurling:{ myNote:"", saved:[] } };
     let errs = 0;
 
-    // Always upsert fitness row with both lap_time AND notes so neither clobbers the other
     const { error: ftErr } = await sb.from("fitness_tests").upsert({
       player_id: pid, period, test_date: testDate,
-      lap_time:  parseTime(e.lap) || null,
-      notes:     e.notes?.trim() || null,
+      lap_time: parseTime(e.lap) || null,
+      notes: e.notes?.trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict:"player_id,period" });
     if (ftErr) errs++;
 
-    // Coach notes — always upsert both sports
     for (const sport of ["football","hurling"]) {
       const note = (cn[sport]?.myNote ?? "").trim();
-      const payload = {
-        player_id: pid, sport, coach_email: coachEmail,
-        session_date: testDate, note: note || null,
-        updated_at: new Date().toISOString(),
-      };
-      const { error } = await sb.from("coach_notes")
-        .upsert(payload, { onConflict:"player_id,sport,coach_email" });
+      const payload = { player_id: pid, sport, coach_email: coachEmail, session_date: testDate, note: note || null, updated_at: new Date().toISOString() };
+      const { error } = await sb.from("coach_notes").upsert(payload, { onConflict:"player_id,sport,coach_email" });
       if (error) errs++;
       else {
         setCnotes(c => {
@@ -1540,20 +1526,18 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
     if (!errs) {
       showToast("✅ Saved!");
       const pObj = allPlayers.find(p => p.id === pid);
-      logAudit(coachEmail, pObj || { id: pid, name: "Unknown" }, "note_saved",
-        `Coach notes saved – ${pObj?.name || pid}`, null, period);
+      logAudit(coachEmail, pObj || { id: pid, name: "Unknown" }, "note_saved", `Coach notes saved – ${pObj?.name || pid}`, null, period);
     } else {
       showToast("⚠️ Some changes failed to save");
     }
   }
 
-  const coachName = email => ({"e.t.archbold@gmail.com":"Elaine","seangallagher2506@gmail.com":"Sean","dodplumbing@gmail.com":"Coach 3","sokelly123@gmail.com":"Sinéad","rtrappe@gmail.com":"Coach R"}[email] || email.split("@")[0]);
+  const coachName  = email => ({"e.t.archbold@gmail.com":"Elaine","seangallagher2506@gmail.com":"Sean","dodplumbing@gmail.com":"Coach 3","sokelly123@gmail.com":"Sinéad","rtrappe@gmail.com":"Coach R"}[email] || email.split("@")[0]);
   const coachColor = email => ({"e.t.archbold@gmail.com":"#1565c0","seangallagher2506@gmail.com":"#2e7d32","dodplumbing@gmail.com":"#6a1b9a","sokelly123@gmail.com":"#c45e00","rtrappe@gmail.com":"#00796b"}[email] || "#666");
   const filledCount = Object.values(entries).filter(e => parseTime(e.lap)).length;
 
   return (
     <div>
-      {/* Period + date controls */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <div>
           <label className="lbl">Test Period</label>
@@ -1568,7 +1552,6 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
         </div>
       </div>
 
-      {/* View toggle */}
       <div style={{display:"flex",borderRadius:10,overflow:"hidden",border:"2px solid #a31621",marginBottom:16,width:"100%"}}>
         {[["entry","Enter Times"],["results","Results Table"]].map(([v,label]) => (
           <button key={v} onClick={() => setView(v)} style={{
@@ -1584,17 +1567,12 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
       {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>Loading…</div>}
 
-      {/* ── ENTRY VIEW ── */}
       {!loading && view === "entry" && (
         <>
           <div style={{fontSize:11,color:"var(--muted)",marginBottom:10,lineHeight:1.6}}>
             Lap times save automatically when you move to the next field. Open Notes to add coaching notes and hit Save.
           </div>
-
-          {/* Search bar */}
-          <input className="inp" placeholder="🔍  Search player…" value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{marginBottom:12,fontSize:13,padding:"8px 12px"}} />
+          <input className="inp" placeholder="🔍  Search player…" value={search} onChange={e => setSearch(e.target.value)} style={{marginBottom:12,fontSize:13,padding:"8px 12px"}} />
 
           {allPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p) => {
             const e   = entries[p.id] || { lap:"", notes:"" };
@@ -1605,14 +1583,10 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
 
             return (
               <div key={p.id} style={{background:"#fff",border:"1px solid #e0e0e0",borderRadius:12,marginBottom:8,overflow:"hidden"}}>
-
-                {/* Name + lap time */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 90px",gap:8,padding:"10px 12px",alignItems:"center"}}>
                   <div style={{fontWeight:700,fontSize:13,color:"var(--dark)",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     {p.name}
-                    <span style={{background:"#fff4cc",color:"#7a5c00",fontSize:11,
-                                  fontWeight:900,padding:"1px 7px",borderRadius:10,
-                                  border:"1px solid #d4a017",flexShrink:0}}>
+                    <span style={{background:"#fff4cc",color:"#7a5c00",fontSize:11,fontWeight:900,padding:"1px 7px",borderRadius:10,border:"1px solid #d4a017",flexShrink:0}}>
                       {ptsMap[p.id] || 0} pts
                     </span>
                   </div>
@@ -1625,30 +1599,23 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
                         clearTimeout(lapDebounce.current[p.id]);
                         lapDebounce.current[p.id] = setTimeout(async () => {
                           const secs = parseTime(val);
-                          if (!secs && val.trim() !== "") return; // partial — wait
+                          if (!secs && val.trim() !== "") return;
                           const cur = entries[p.id] || {};
                           let error;
                           if (secs) {
-                            // Valid time — upsert full row
                             ({ error } = await sb.from("fitness_tests").upsert({
                               player_id: p.id, period, test_date: testDate,
-                              lap_time: secs,
-                              notes: cur.notes?.trim() || null,
+                              lap_time: secs, notes: cur.notes?.trim() || null,
                               updated_at: new Date().toISOString(),
                             }, { onConflict:"player_id,period" }));
                           } else {
-                            // Cleared — update existing row only (ignore if no row yet)
                             ({ error } = await sb.from("fitness_tests")
                               .update({ lap_time: null, updated_at: new Date().toISOString() })
-                              .eq("player_id", p.id)
-                              .eq("period", period));
-                            // error is fine if row does not exist — nothing to clear
+                              .eq("player_id", p.id).eq("period", period));
                             error = null;
                           }
                           if (!error) {
-                            showToast(secs
-                              ? `✅ ${p.name.split(" ")[0]} lap saved`
-                              : `✅ ${p.name.split(" ")[0]} lap cleared`);
+                            showToast(secs ? `✅ ${p.name.split(" ")[0]} lap saved` : `✅ ${p.name.split(" ")[0]} lap cleared`);
                             logAudit(coachEmail, p, secs ? "lap_saved" : "lap_cleared",
                               `${period === "pre" ? "Pre" : "Post"}-summer lap – ${p.name}`,
                               null, secs ? `${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}` : "cleared");
@@ -1661,54 +1628,32 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
                   </div>
                 </div>
 
-                {/* Notes toggle */}
                 <div style={{borderTop:"1px solid #f0f0f0"}}>
                   <button onClick={() => setOpen(o => ({...o, [p.id]: !o[p.id]}))}
                     style={{width:"100%",padding:"8px 12px",border:"none",background:notesOpen?"#f0f4ff":"transparent",
-                            cursor:"pointer",display:"flex",alignItems:"center",gap:6,
-                            fontSize:12,fontWeight:700,color:"#333",fontFamily:"inherit"}}>
+                            cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:"#333",fontFamily:"inherit"}}>
                     <span>📝 Notes</span>
-                    {hasNotes > 0 && (
-                      <span style={{background:"var(--primary)",color:"#fff",fontSize:10,fontWeight:900,
-                                    padding:"1px 7px",borderRadius:10}}>{hasNotes}</span>
-                    )}
+                    {hasNotes > 0 && <span style={{background:"var(--primary)",color:"#fff",fontSize:10,fontWeight:900,padding:"1px 7px",borderRadius:10}}>{hasNotes}</span>}
                     <span style={{marginLeft:"auto",fontSize:11,color:"#999"}}>{notesOpen?"▲":"▼"}</span>
                   </button>
                 </div>
 
-                {/* Notes body */}
                 {notesOpen && (
                   <div style={{padding:"12px",background:"#fafafa",borderTop:"1px solid #f0f0f0",display:"flex",flexDirection:"column",gap:12}}>
-
                     <div>
                       <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>🏃 Fitness Notes</div>
-                      <input className="inp" placeholder="e.g. Strong effort, needs to pace better…"
-                        value={e.notes}
-                        onChange={ev => setField(p.id,"notes",ev.target.value)}
-                        style={{fontSize:12,padding:"6px 8px",width:"100%"}} />
+                      <input className="inp" placeholder="e.g. Strong effort, needs to pace better…" value={e.notes} onChange={ev => setField(p.id,"notes",ev.target.value)} style={{fontSize:12,padding:"6px 8px",width:"100%"}} />
                     </div>
-
                     <div>
                       <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>⚽ Football Notes</div>
-                      <NoteAccordionBody sport="football" cn={cn.football}
-                        coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
-                        onChange={val => setCnoteField(p.id,"football",val)} />
+                      <NoteAccordionBody sport="football" cn={cn.football} coachEmail={coachEmail} coachName={coachName} coachColor={coachColor} onChange={val => setCnoteField(p.id,"football",val)} />
                     </div>
-
                     <div>
                       <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",marginBottom:4}}>🏑 Hurling Notes</div>
-                      <NoteAccordionBody sport="hurling" cn={cn.hurling}
-                        coachEmail={coachEmail} coachName={coachName} coachColor={coachColor}
-                        onChange={val => setCnoteField(p.id,"hurling",val)} />
+                      <NoteAccordionBody sport="hurling" cn={cn.hurling} coachEmail={coachEmail} coachName={coachName} coachColor={coachColor} onChange={val => setCnoteField(p.id,"hurling",val)} />
                     </div>
-
-                    {/* Save button inside accordion */}
                     <button onClick={() => savePlayer(p.id)} disabled={!!saving[p.id]}
-                      style={{padding:"11px",borderRadius:8,border:"none",
-                              background:saving[p.id]?"#ccc":"#a31621",
-                              color:"#fff",fontWeight:700,fontSize:14,
-                              cursor:saving[p.id]?"not-allowed":"pointer",
-                              fontFamily:"inherit",width:"100%",letterSpacing:"0.04em"}}>
+                      style={{padding:"11px",borderRadius:8,border:"none",background:saving[p.id]?"#ccc":"#a31621",color:"#fff",fontWeight:700,fontSize:14,cursor:saving[p.id]?"not-allowed":"pointer",fontFamily:"inherit",width:"100%",letterSpacing:"0.04em"}}>
                       {saving[p.id] ? "Saving…" : "Save"}
                     </button>
                   </div>
@@ -1723,7 +1668,6 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
         </>
       )}
 
-      {/* ── RESULTS VIEW ── */}
       {!loading && view === "results" && (
         <ResultsTable allPlayers={allPlayers} period={period} ptsMap={ptsMap} />
       )}
@@ -1731,8 +1675,7 @@ function FitnessTab({ allPlayers, coachEmail, showToast }) {
   );
 }
 
-// ── NoteAccordionBody ─────────────────────────────────────────────────────────
-// Renders inside an open accordion: other coaches' saved notes + my editable note.
+// ── NoteAccordionBody ──────────────────────────────────────────────────────────
 function NoteAccordionBody({ sport, cn, coachEmail, coachName, coachColor, onChange }) {
   const otherNotes = cn.saved.filter(s => s.coach_email !== coachEmail && s.note);
   return (
@@ -1740,45 +1683,30 @@ function NoteAccordionBody({ sport, cn, coachEmail, coachName, coachColor, onCha
       {otherNotes.length > 0 && (
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
           {otherNotes.map(s => (
-            <div key={s.coach_email} style={{
-              background:"#fff",borderRadius:6,padding:"6px 10px",
-              fontSize:12,lineHeight:1.5,
-              borderLeft:`3px solid ${coachColor(s.coach_email)}`
-            }}>
-              <span style={{fontWeight:700,fontSize:11,textTransform:"uppercase",
-                            letterSpacing:"0.05em",color:coachColor(s.coach_email)}}>
-                {coachName(s.coach_email)}:&nbsp;
-              </span>
+            <div key={s.coach_email} style={{background:"#fff",borderRadius:6,padding:"6px 10px",fontSize:12,lineHeight:1.5,borderLeft:`3px solid ${coachColor(s.coach_email)}`}}>
+              <span style={{fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",color:coachColor(s.coach_email)}}>{coachName(s.coach_email)}:&nbsp;</span>
               {s.note}
             </div>
           ))}
         </div>
       )}
-      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",
-                   color:coachColor(coachEmail),marginBottom:4}}>
+      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:coachColor(coachEmail),marginBottom:4}}>
         {coachName(coachEmail)} (you)
       </div>
-      <textarea className="inp"
-        placeholder={`Your ${sport} note…`}
-        value={cn.myNote}
-        onChange={e => onChange(e.target.value)}
-        rows={2}
-        style={{width:"100%",resize:"vertical",fontSize:12,padding:"7px 10px"}}
-      />
+      <textarea className="inp" placeholder={`Your ${sport} note…`} value={cn.myNote} onChange={e => onChange(e.target.value)} rows={2} style={{width:"100%",resize:"vertical",fontSize:12,padding:"7px 10px"}} />
     </div>
   );
 }
 
 // ── ResultsTable ──────────────────────────────────────────────────────────────
 function ResultsTable({ allPlayers, period, ptsMap = {} }) {
-  const [allTests,    setAllTests]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showPeriod,  setShowPeriod]  = useState(period);
+  const [allTests,   setAllTests]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showPeriod, setShowPeriod] = useState(period);
 
   useEffect(() => {
     if (!allPlayers.length) return;
-    sb.from("fitness_tests").select("*")
-      .in("player_id", allPlayers.map(p => p.id))
+    sb.from("fitness_tests").select("*").in("player_id", allPlayers.map(p => p.id))
       .then(({ data }) => { setAllTests(data || []); setLoading(false); });
   }, [allPlayers]);
 
@@ -1788,30 +1716,23 @@ function ResultsTable({ allPlayers, period, ptsMap = {} }) {
   allPlayers.forEach(p => { playerMap[p.id] = { id: p.id, name: p.name, pre: null, post: null }; });
   allTests.forEach(t => { if (playerMap[t.player_id]) playerMap[t.player_id][t.period] = t; });
 
-  // Combined rank: lap time rank + inverse pts rank (lower = better)
-  // Players with no lap time go to the bottom
   const base = Object.values(playerMap);
   const maxPts = Math.max(...base.map(r => ptsMap[r.id] || 0), 1);
 
   const rows = base.sort((a, b) => {
     const ta = a[showPeriod]?.lap_time, tb = b[showPeriod]?.lap_time;
     const pa = ptsMap[a.id] || 0, pb = ptsMap[b.id] || 0;
-    // If both have a lap time, combine: normalised lap (lower=better) minus normalised pts (higher=better)
     if (ta && tb) {
-      const scoreA = (ta / 600) - (pa / maxPts);   // lower is better
-      const scoreB = (tb / 600) - (pb / maxPts);
-      return scoreA - scoreB;
+      return ((ta/600)-(pa/maxPts)) - ((tb/600)-(pb/maxPts));
     }
-    if (!ta && !tb) return pb - pa;  // no times: rank by pts
+    if (!ta && !tb) return pb - pa;
     if (!ta) return 1;
     if (!tb) return -1;
   });
 
-  const hasAnyPost  = rows.some(r => r.post?.lap_time);
+  const hasAnyPost = rows.some(r => r.post?.lap_time);
   const medalColors = ["#f5c842","#b0b0b0","#cd7f32"];
-  const cols = hasAnyPost
-    ? "28px 1fr 70px 70px 60px 55px"
-    : "28px 1fr 80px 55px";
+  const cols = hasAnyPost ? "28px 1fr 70px 70px 60px 55px" : "28px 1fr 80px 55px";
 
   return (
     <div>
@@ -1819,87 +1740,43 @@ function ResultsTable({ allPlayers, period, ptsMap = {} }) {
         <span style={{fontSize:11,color:"#9a7070",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Rank by:</span>
         {["pre","post"].map(p => (
           <button key={p} onClick={() => setShowPeriod(p)} style={{
-            padding:"6px 14px", borderRadius:8, cursor:"pointer",
-            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            padding:"6px 14px", borderRadius:8, cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:700,
             background: showPeriod===p ? "#a31621" : "#fff",
             color:      showPeriod===p ? "#fff"    : "#a31621",
-            border:     "2px solid #a31621",
-            opacity:    showPeriod===p ? 1 : 0.45,
+            border: "2px solid #a31621",
+            opacity: showPeriod===p ? 1 : 0.45,
             transition:"all 0.15s",
-          }}>
-            {p === "pre" ? "🌱 Pre" : "🏆 Post"}
-          </button>
+          }}>{p === "pre" ? "🌱 Pre" : "🏆 Post"}</button>
         ))}
       </div>
 
-      {/* Header */}
-      <div style={{display:"grid", gridTemplateColumns:cols, gap:6,
-                   padding:"7px 10px", background:"#f5f5f5", borderRadius:"8px 8px 0 0",
-                   fontSize:11, fontWeight:700, color:"#5a3a3d",
-                   textTransform:"uppercase", letterSpacing:"0.06em"}}>
-        <div>#</div>
-        <div>Player</div>
-        <div style={{textAlign:"center"}}>Pre Lap</div>
+      <div style={{display:"grid",gridTemplateColumns:cols,gap:6,padding:"7px 10px",background:"#f5f5f5",borderRadius:"8px 8px 0 0",fontSize:11,fontWeight:700,color:"#5a3a3d",textTransform:"uppercase",letterSpacing:"0.06em"}}>
+        <div>#</div><div>Player</div><div style={{textAlign:"center"}}>Pre Lap</div>
         {hasAnyPost && <div style={{textAlign:"center"}}>Post Lap</div>}
         {hasAnyPost && <div style={{textAlign:"center"}}>Diff</div>}
         <div style={{textAlign:"center"}}>Pts</div>
       </div>
 
       {rows.map((r, i) => {
-        const preLap   = r.pre?.lap_time  ?? null;
-        const postLap  = r.post?.lap_time ?? null;
-        const diff     = preLap && postLap ? postLap - preLap : null;
+        const preLap  = r.pre?.lap_time  ?? null;
+        const postLap = r.post?.lap_time ?? null;
+        const diff    = preLap && postLap ? postLap - preLap : null;
         const improved = diff !== null && diff < 0;
         const slower   = diff !== null && diff > 0;
-        const pts      = ptsMap[r.id] || 0;
+        const pts = ptsMap[r.id] || 0;
         const preNotes = r.pre?.notes, postNotes = r.post?.notes;
-
         return (
           <div key={r.name}>
-            <div style={{display:"grid", gridTemplateColumns:cols,
-                         gap:6, padding:"9px 10px", alignItems:"center",
-                         background: i%2===0 ? "#fff" : "#fafafa",
-                         borderBottom:"1px solid #f0f0f0"}}>
-              {/* Rank */}
-              <div style={{fontSize:i<3?16:12, textAlign:"center",
-                           color:i<3?medalColors[i]:"#ccc", fontWeight:900}}>
-                {i<3 ? ["🥇","🥈","🥉"][i] : i+1}
-              </div>
-              {/* Name */}
-              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",
-                           textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                {r.name}
-              </div>
-              {/* Pre lap */}
-              <div style={{textAlign:"center",fontSize:13,
-                           color:showPeriod==="pre"?"#a31621":"#5a3a3d",
-                           fontWeight:showPeriod==="pre"?700:400}}>
-                {preLap ? fmtTime(preLap) : <span style={{color:"#ddd"}}>—</span>}
-              </div>
-              {/* Post lap */}
-              {hasAnyPost && <div style={{textAlign:"center",fontSize:13,
-                           color:showPeriod==="post"?"#a31621":"#5a3a3d",
-                           fontWeight:showPeriod==="post"?700:400}}>
-                {postLap ? fmtTime(postLap) : <span style={{color:"#ddd"}}>—</span>}
-              </div>}
-              {/* Diff */}
-              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,fontWeight:700,
-                           color:improved?"#2e7d32":slower?"#e53935":"#ccc"}}>
-                {diff===null ? "—" : improved ? `▼${fmtTime(Math.abs(diff))}` : slower ? `▲${fmtTime(diff)}` : "="}
-              </div>}
-              {/* Points */}
-              <div style={{textAlign:"center"}}>
-                <span style={{background:"#fff4cc",color:"#1a0a0b",fontSize:12,
-                              fontWeight:900,padding:"2px 8px",borderRadius:10,
-                              border:"1px solid #d4a017"}}>
-                  {pts}
-                </span>
-              </div>
+            <div style={{display:"grid",gridTemplateColumns:cols,gap:6,padding:"9px 10px",alignItems:"center",background:i%2===0?"#fff":"#fafafa",borderBottom:"1px solid #f0f0f0"}}>
+              <div style={{fontSize:i<3?16:12,textAlign:"center",color:i<3?medalColors[i]:"#ccc",fontWeight:900}}>{i<3?["🥇","🥈","🥉"][i]:i+1}</div>
+              <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+              <div style={{textAlign:"center",fontSize:13,color:showPeriod==="pre"?"#a31621":"#5a3a3d",fontWeight:showPeriod==="pre"?700:400}}>{preLap?fmtTime(preLap):<span style={{color:"#ddd"}}>—</span>}</div>
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:13,color:showPeriod==="post"?"#a31621":"#5a3a3d",fontWeight:showPeriod==="post"?700:400}}>{postLap?fmtTime(postLap):<span style={{color:"#ddd"}}>—</span>}</div>}
+              {hasAnyPost && <div style={{textAlign:"center",fontSize:12,fontWeight:700,color:improved?"#2e7d32":slower?"#e53935":"#ccc"}}>{diff===null?"—":improved?`▼${fmtTime(Math.abs(diff))}`:slower?`▲${fmtTime(diff)}`:"="}</div>}
+              <div style={{textAlign:"center"}}><span style={{background:"#fff4cc",color:"#1a0a0b",fontSize:12,fontWeight:900,padding:"2px 8px",borderRadius:10,border:"1px solid #d4a017"}}>{pts}</span></div>
             </div>
-            {/* Notes */}
             {(preNotes||postNotes) && (
-              <div style={{padding:"4px 10px 8px 44px",background:i%2===0?"#fff":"#fafafa",
-                           borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
+              <div style={{padding:"4px 10px 8px 44px",background:i%2===0?"#fff":"#fafafa",borderBottom:"1px solid #f0f0f0",display:"flex",gap:16,flexWrap:"wrap"}}>
                 {preNotes  && <div style={{fontSize:11,color:"#9a7070",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#e65100"}}>Pre: </span>{preNotes}</div>}
                 {postNotes && <div style={{fontSize:11,color:"#9a7070",fontStyle:"italic",lineHeight:1.5}}><span style={{fontWeight:700,fontStyle:"normal",color:"#2e7d32"}}>Post: </span>{postNotes}</div>}
               </div>
@@ -1908,27 +1785,24 @@ function ResultsTable({ allPlayers, period, ptsMap = {} }) {
         );
       })}
 
-      {/* Squad summary */}
       {(() => {
         const timed = rows.filter(r => r[showPeriod]?.lap_time);
         if (!timed.length) return null;
-        const times    = timed.map(r => r[showPeriod].lap_time);
-        const avg      = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+        const times = timed.map(r => r[showPeriod].lap_time);
+        const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
         const improved = rows.filter(r => r.pre?.lap_time && r.post?.lap_time && r.post.lap_time < r.pre.lap_time);
-        const topPts   = Math.max(...rows.map(r => ptsMap[r.id]||0));
+        const topPts = Math.max(...rows.map(r => ptsMap[r.id]||0));
         return (
           <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
             {[
-              {label:"Squad avg",  val:fmtTime(avg),              color:"#a31621"},
-              {label:"Fastest",    val:fmtTime(Math.min(...times)),color:"#2e7d32"},
-              {label:"Top pts",    val:`${topPts} pts`,            color:"#d4a017"},
-              ...(improved.length ? [{label:"Improved", val:`${improved.length} boys`, color:"#2e7d32"}] : []),
+              {label:"Squad avg",  val:fmtTime(avg),               color:"#a31621"},
+              {label:"Fastest",    val:fmtTime(Math.min(...times)), color:"#2e7d32"},
+              {label:"Top pts",    val:`${topPts} pts`,             color:"#d4a017"},
+              ...(improved.length?[{label:"Improved",val:`${improved.length} boys`,color:"#2e7d32"}]:[]),
             ].map(stat => (
-              <div key={stat.label} style={{flex:1,minWidth:80,background:"#f9f9f9",
-                    border:"1px solid #eee",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+              <div key={stat.label} style={{flex:1,minWidth:80,background:"#f9f9f9",border:"1px solid #eee",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
                 <div style={{fontSize:17,fontWeight:900,color:stat.color}}>{stat.val}</div>
-                <div style={{fontSize:10,color:"#9a7070",textTransform:"uppercase",
-                             letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
+                <div style={{fontSize:10,color:"#9a7070",textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -1938,32 +1812,25 @@ function ResultsTable({ allPlayers, period, ptsMap = {} }) {
   );
 }
 
-
-
-
 // ── DashboardTab ──────────────────────────────────────────────────────────────
-// Super-admin only. Pulls live data from Supabase.
 function DashboardTab({ allPlayers }) {
-  const [stats,       setStats]       = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [recentLog,   setRecentLog]   = useState([]);
-  const [claimedIds,  setClaimedIds]  = useState(new Set());
-  const [ptsMap,      setPtsMap]      = useState({});
-  const [weeklyMap,   setWeeklyMap]   = useState({});  // { pid: { w1:pts, w2:pts, ... } }
-  const [activeView,  setActiveView]  = useState("overview");
+  const [stats,      setStats]      = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [recentLog,  setRecentLog]  = useState([]);
+  const [claimedIds, setClaimedIds] = useState(new Set());
+  const [ptsMap,     setPtsMap]     = useState({});
+  const [weeklyMap,  setWeeklyMap]  = useState({});
+  const [activeView, setActiveView] = useState("overview");
 
   useEffect(() => {
     if (!allPlayers.length) return;
     const ids = allPlayers.map(p => p.id);
-
     Promise.all([
       sb.from("task_completions").select("player_id,task_key,completed_at").in("player_id", ids),
       sb.from("parent_players").select("player_id"),
       sb.from("audit_log").select("user_email,player_name,action,detail,created_at").order("created_at",{ascending:false}).limit(20),
       sb.from("fitness_tests").select("player_id,period,lap_time").in("player_id", ids),
     ]).then(([{data:comps},{data:links},{data:logs},{data:fitness}]) => {
-
-      // Points per player
       const byPlayer = {};
       ids.forEach(id => { byPlayer[id] = {}; });
       comps?.forEach(r => { if(byPlayer[r.player_id]) byPlayer[r.player_id][r.task_key]=true; });
@@ -1971,69 +1838,48 @@ function DashboardTab({ allPlayers }) {
       ids.forEach(id => { pm[id] = totalPts(byPlayer[id]); });
       setPtsMap(pm);
 
-      // Weekly pts breakdown per player
       const wm = {};
-      ids.forEach(id => {
-        wm[id] = {};
-        WEEKS.forEach(w => { wm[id][w.week] = weekPts(w, byPlayer[id]); });
-      });
+      ids.forEach(id => { wm[id] = {}; WEEKS.forEach(w => { wm[id][w.week] = weekPts(w, byPlayer[id]); }); });
       setWeeklyMap(wm);
 
-      // Claimed players
       setClaimedIds(new Set(links?.map(l => l.player_id) || []));
-
-      // Recent audit log
       setRecentLog(logs || []);
 
-      // Summary stats
       const totalSessions = comps?.length || 0;
-      const playersActive  = new Set(comps?.map(r => r.player_id)).size;
-      const avgPts = ids.length
-        ? Math.round(Object.values(pm).reduce((a,b)=>a+b,0) / ids.length)
-        : 0;
-      const topPlayer = allPlayers.slice().sort((a,b)=>(pm[b.id]||0)-(pm[a.id]||0))[0];
-
-      // This week sessions (last 7 days)
+      const playersActive = new Set(comps?.map(r => r.player_id)).size;
+      const avgPts = ids.length ? Math.round(Object.values(pm).reduce((a,b)=>a+b,0)/ids.length) : 0;
       const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
       const thisWeekSessions = comps?.filter(r => r.completed_at && new Date(r.completed_at) > weekAgo).length || 0;
-
-      // Pre/post lap times
       const preTimes  = fitness?.filter(f=>f.period==="pre"  && f.lap_time).length || 0;
       const postTimes = fitness?.filter(f=>f.period==="post" && f.lap_time).length || 0;
 
-      setStats({ totalSessions, playersActive, avgPts, topPlayer, thisWeekSessions, preTimes, postTimes,
+      setStats({ totalSessions, playersActive, avgPts, thisWeekSessions, preTimes, postTimes,
                  registered: new Set(links?.map(l=>l.player_id)||[]).size, total: ids.length });
       setLoading(false);
     });
   }, [allPlayers]);
 
-  // Current week number
-  const currentWeek = Math.min(Math.max(
-    Math.floor((new Date() - new Date("2026-06-29")) / (7*24*60*60*1000)) + 1, 1), 8);
-
-  // Sort players by pts desc
+  const currentWeek = Math.min(Math.max(Math.floor((new Date()-new Date("2026-06-29"))/(7*24*60*60*1000))+1,1),8);
   const sortedPlayers = allPlayers.slice().sort((a,b)=>(ptsMap[b.id]||0)-(ptsMap[a.id]||0));
 
-  // Action icon + colour for audit log
   const actionStyle = {
-    task_complete:   { icon:"✅", color:"#2e7d32", bg:"#e8f5e9"  },
-    task_incomplete: { icon:"↩️", color:"#e65100", bg:"#fff3e0"  },
-    lap_saved:       { icon:"⏱", color:"#1565c0", bg:"#e3f2fd"  },
-    lap_cleared:     { icon:"🗑", color:"#9e9e9e", bg:"#f5f5f5"  },
-    note_saved:      { icon:"📝", color:"#7b1fa2", bg:"#f3e5f5"  },
+    task_complete:   { icon:"✅", color:"#2e7d32", bg:"#e8f5e9",  label:"Marked complete"   },
+    task_incomplete: { icon:"↩️", color:"#e65100", bg:"#fff3e0",  label:"Marked incomplete" },
+    lap_saved:       { icon:"⏱️", color:"#1565c0", bg:"#e3f2fd",  label:"Lap time saved"    },
+    lap_cleared:     { icon:"🗑️", color:"#9e9e9e", bg:"#f5f5f5",  label:"Lap time cleared"  },
+    note_saved:      { icon:"📋", color:"#7b1fa2", bg:"#f3e5f5",  label:"Coach note saved"  },
+    video_watched:   { icon:"▶️", color:"#c62828", bg:"#ffebee",  label:"Video watched"     },
   };
 
   const fmtAgo = (ts) => {
     if (!ts) return "";
-    const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+    const diff = Math.floor((Date.now()-new Date(ts))/1000);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
     return new Date(ts).toLocaleDateString("en-IE",{day:"numeric",month:"short"});
   };
 
-  // Max pts for bar scaling
-  const maxPts = Math.max(...sortedPlayers.map(p=>ptsMap[p.id]||0), 1);
   const maxPossible = WEEKS.reduce((a,w)=>a+weekMaxPts(w),0);
 
   if (loading) return (
@@ -2044,20 +1890,12 @@ function DashboardTab({ allPlayers }) {
 
   return (
     <div className="admin-wrap">
-
-      {/* ── Header ── */}
-      <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",
-                   padding:"16px 18px",marginBottom:14,color:"#fff",position:"relative",overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",padding:"16px 18px",marginBottom:14,color:"#fff",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-10,bottom:-14,fontSize:90,opacity:0.06,pointerEvents:"none"}}>📊</div>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,color:"var(--gold)",letterSpacing:"0.02em"}}>
-          SQUAD DASHBOARD
-        </div>
-        <div style={{fontSize:12,opacity:0.7,marginTop:2}}>
-          Fingallians 2014 Boys · Week {currentWeek} of 8 · Summer Challenge 2026
-        </div>
-        {/* Sub-nav */}
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,color:"var(--gold)",letterSpacing:"0.02em"}}>SQUAD DASHBOARD</div>
+        <div style={{fontSize:12,opacity:0.7,marginTop:2}}>Fingallians 2014 Boys · Week {currentWeek} of 8 · Summer Challenge 2026</div>
         <div style={{display:"flex",gap:6,marginTop:12,flexWrap:"wrap"}}>
-          {[["overview","Overview"],["squad","Squad"],["weekly","By Week"],["log","Activity Log"]].map(([v,l])=>(
+          {[["overview","Overview"],["log","Activity Log"]].map(([v,l])=>(
             <button key={v} onClick={()=>setActiveView(v)} style={{
               padding:"5px 12px",borderRadius:16,border:"1px solid rgba(255,255,255,0.3)",
               background:activeView===v?"rgba(255,255,255,0.2)":"transparent",
@@ -2067,15 +1905,12 @@ function DashboardTab({ allPlayers }) {
         </div>
       </div>
 
-      {/* ── OVERVIEW ── */}
       {activeView === "overview" && <>
-
-        {/* Metric cards */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
           {[
             { label:"Registered",    value:`${stats.registered}/${stats.total}`, sub:`${stats.total-stats.registered} not signed up`, color:"#2e7d32" },
             { label:"Active players",value:stats.playersActive,                  sub:"at least 1 session logged",    color:"var(--g)"  },
-            { label:"Sessions (7d)", value:stats.thisWeekSessions,              sub:"logged in last 7 days",          color:"#1565c0"   },
+            { label:"Sessions (7d)", value:stats.thisWeekSessions,               sub:"logged in last 7 days",         color:"#1565c0"   },
             { label:"Squad avg pts", value:stats.avgPts,                         sub:`of ${maxPossible} possible`,    color:"#b8860b"   },
           ].map(s=>(
             <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 14px",border:"1px solid #f0dede"}}>
@@ -2086,43 +1921,32 @@ function DashboardTab({ allPlayers }) {
           ))}
         </div>
 
-        {/* Top 5 leaderboard */}
         <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",marginBottom:14}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                       letterSpacing:"0.04em",marginBottom:10}}>TOP PLAYERS</div>
-          {sortedPlayers.slice(0,5).map((p,i)=>{
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>LEADERBOARD</div>
+          {sortedPlayers.map((p,i)=>{
             const pts = ptsMap[p.id]||0;
-            const pct = Math.round((pts/maxPts)*100);
+            const pct = Math.round((pts/maxPossible)*100);
             const medals = ["🥇","🥈","🥉"];
             return (
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                <div style={{width:22,textAlign:"center",fontSize:i<3?18:12,flexShrink:0}}>
-                  {i<3 ? medals[i] : `${i+1}`}
-                </div>
-                <div style={{width:32,height:32,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",
-                             display:"flex",alignItems:"center",justifyContent:"center",
-                             fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,flexShrink:0}}>
-                  {p.name[0]}
-                </div>
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:i%2===0?"#fdfafa":"white",borderRadius:10}}>
+                <div style={{width:24,textAlign:"center",fontSize:i<3?18:12,flexShrink:0,color:i<3?["#f5c842","#b0b0b0","#cd7f32"][i]:"var(--muted)",fontWeight:900}}>{i<3?medals[i]:i+1}</div>
+                <div style={{width:32,height:32,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,flexShrink:0}}>{p.name[0]}</div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:700}}>{p.name}</div>
-                  <div style={{height:4,background:"#f0dede",borderRadius:2,marginTop:4,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${pct}%`,background:i===0?"var(--gold)":"var(--g)",
-                                 borderRadius:2,transition:"width 0.4s"}}/>
+                  <div style={{height:3,background:"#f0dede",borderRadius:2,marginTop:3,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:i===0?"var(--gold)":"var(--g)",borderRadius:2,transition:"width 0.4s"}}/>
                   </div>
                 </div>
                 <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,color:"var(--g)",flexShrink:0}}>
-                  {pts}
+                  {pts} <span style={{fontFamily:"'Lato',sans-serif",fontSize:10,color:"var(--muted)",fontWeight:600}}>pts</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Fitness summary */}
         <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",marginBottom:14}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                       letterSpacing:"0.04em",marginBottom:10}}>FITNESS TESTING</div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>FITNESS TESTING</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {[
               {label:"Pre-summer timed", value:stats.preTimes,  color:"#1565c0"},
@@ -2137,21 +1961,14 @@ function DashboardTab({ allPlayers }) {
           </div>
         </div>
 
-        {/* Registration: unregistered players */}
         {stats.total - stats.registered > 0 && (
           <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                         letterSpacing:"0.04em",marginBottom:10}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>
               ⏳ NOT YET REGISTERED ({stats.total - stats.registered})
             </div>
             {allPlayers.filter(p=>!claimedIds.has(p.id)).map(p=>(
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",
-                                      borderBottom:"1px solid #f8f0f0"}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:"#e65100",color:"#fff",
-                             display:"flex",alignItems:"center",justifyContent:"center",
-                             fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,flexShrink:0}}>
-                  {p.name[0]}
-                </div>
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid #f8f0f0"}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:"#e65100",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,flexShrink:0}}>{p.name[0]}</div>
                 <div style={{flex:1,fontSize:13,fontWeight:600}}>{p.name}</div>
                 <div style={{fontSize:11,color:"#e65100",fontWeight:700}}>No account</div>
               </div>
@@ -2160,126 +1977,23 @@ function DashboardTab({ allPlayers }) {
         )}
       </>}
 
-      {/* ── SQUAD ── */}
-      {activeView === "squad" && (
-        <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                       letterSpacing:"0.04em",marginBottom:10}}>ALL PLAYERS · {sortedPlayers.length} TOTAL</div>
-          {sortedPlayers.map((p,i)=>{
-            const pts    = ptsMap[p.id]||0;
-            const pct    = Math.round((pts/maxPossible)*100);
-            const active = claimedIds.has(p.id);
-            return (
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",
-                                      borderBottom:"1px solid #f8f0f0"}}>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,width:24,
-                             color:"var(--muted)",textAlign:"center",flexShrink:0}}>
-                  {i+1}
-                </div>
-                <div style={{width:32,height:32,borderRadius:"50%",
-                             background:active?"var(--g)":"#ccc",
-                             color:active?"var(--gold)":"#fff",
-                             display:"flex",alignItems:"center",justifyContent:"center",
-                             fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,flexShrink:0}}>
-                  {p.name[0]}
-                </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-                    {p.name}
-                    {!active && <span style={{fontSize:10,color:"#e65100",fontWeight:700}}>no account</span>}
-                  </div>
-                  <div style={{height:3,background:"#f0dede",borderRadius:2,marginTop:4,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${pct}%`,
-                                 background:i===0?"var(--gold)":"var(--g)",borderRadius:2}}/>
-                  </div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)"}}>{pts}</div>
-                  <div style={{fontSize:10,color:"var(--muted)"}}>{pct}%</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── WEEKLY BREAKDOWN ── */}
-      {activeView === "weekly" && (
-        <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                       letterSpacing:"0.04em",marginBottom:10}}>POINTS BY WEEK · SQUAD</div>
-          {/* Week headers */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr repeat(8,40px)",gap:4,
-                       fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",
-                       letterSpacing:"0.05em",marginBottom:6,textAlign:"center"}}>
-            <div style={{textAlign:"left"}}>Player</div>
-            {WEEKS.map(w=>(
-              <div key={w.week} style={{color:w.week===currentWeek?"var(--g)":"var(--muted)"}}>
-                W{w.week}
-              </div>
-            ))}
-          </div>
-          {sortedPlayers.map(p=>(
-            <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr repeat(8,40px)",gap:4,
-                                    padding:"5px 0",borderBottom:"1px solid #f8f0f0",
-                                    alignItems:"center",textAlign:"center"}}>
-              <div style={{fontSize:12,fontWeight:600,textAlign:"left",overflow:"hidden",
-                           textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name.split(" ")[0]}</div>
-              {WEEKS.map(w=>{
-                const wPts  = weeklyMap[p.id]?.[w.week] || 0;
-                const wMax  = weekMaxPts(w);
-                const wPct  = Math.round((wPts/wMax)*100);
-                const bg    = wPts===0 ? "#f0dede" : wPct>=80 ? "var(--g)" : wPct>=40 ? "#e06060" : "#f5c0c0";
-                const col   = wPts===0 ? "var(--muted)" : wPct>=40 ? "#fff" : "var(--dark)";
-                return (
-                  <div key={w.week} style={{background:bg,borderRadius:4,padding:"3px 0",
-                                            fontSize:11,fontWeight:700,color:col}}>
-                    {wPts||""}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          {/* Legend */}
-          <div style={{display:"flex",gap:12,marginTop:10,fontSize:10,color:"var(--muted)"}}>
-            {[["var(--g)","High"],["#f5c0c0","Low"],["#f0dede","None"]].map(([bg,l])=>(
-              <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
-                <div style={{width:10,height:10,borderRadius:2,background:bg,flexShrink:0}}/>
-                {l}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── ACTIVITY LOG ── */}
       {activeView === "log" && (
         <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",
-                       letterSpacing:"0.04em",marginBottom:10}}>RECENT ACTIVITY</div>
-          {recentLog.length === 0 && (
-            <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>
-              No activity logged yet
-            </div>
-          )}
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>RECENT ACTIVITY</div>
+          {recentLog.length === 0 && <div style={{textAlign:"center",color:"var(--muted)",padding:"20px 0",fontSize:13}}>No activity logged yet</div>}
           {recentLog.map((r,i)=>{
-            const s = actionStyle[r.action] || {icon:"•",color:"var(--muted)",bg:"#f5f5f5"};
+            const s = actionStyle[r.action] || {icon:"•",color:"var(--muted)",bg:"#f5f5f5",label:r.action};
+            const fullDate = r.created_at ? new Date(r.created_at).toLocaleString("en-IE",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "";
             return (
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
-                                   borderBottom:i<recentLog.length-1?"1px solid #f8f0f0":"none"}}>
-                <div style={{width:30,height:30,borderRadius:"50%",background:s.bg,
-                             display:"flex",alignItems:"center",justifyContent:"center",
-                             fontSize:14,flexShrink:0}}>
-                  {s.icon}
-                </div>
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",borderBottom:i<recentLog.length-1?"1px solid #f8f0f0":"none"}}>
+                <div style={{width:34,height:34,borderRadius:"50%",background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,marginTop:2}}>{s.icon}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:600,color:"var(--dark)"}}>
-                    {r.player_name || r.user_email?.split("@")[0]}
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--dark)"}}>{r.player_name || r.user_email?.split("@")[0]}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:s.color,background:s.bg,padding:"1px 8px",borderRadius:10}}>{s.label}</div>
                   </div>
-                  <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{r.detail}</div>
-                </div>
-                <div style={{fontSize:10,color:"var(--muted)",flexShrink:0,textAlign:"right"}}>
-                  {fmtAgo(r.created_at)}
+                  <div style={{fontSize:12,color:"var(--mid)",marginTop:3,lineHeight:1.4}}>{r.detail}</div>
+                  <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>🕐 {fullDate}</div>
                 </div>
               </div>
             );
@@ -2290,7 +2004,7 @@ function DashboardTab({ allPlayers }) {
   );
 }
 
-
+// ── AdminTab ──────────────────────────────────────────────────────────────────
 function AdminTab({ allPlayers, onRefresh, showToast }) {
   const [newName, setNewName]         = useState("");
   const [adding, setAdding]           = useState(false);
@@ -2306,7 +2020,6 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
         stats[r.player_id][r.task_key] = true;
       });
       setPlayerStats(stats);
-
       const { data: links } = await sb.from("parent_players").select("player_id");
       setClaimedIds(new Set(links?.map(l => l.player_id) || []));
     }
@@ -2337,23 +2050,16 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
     <div className="admin-wrap">
       <div className="admin-banner">
         <div style={{fontSize:28}}>⚙️</div>
-        <div>
-          <h2>ADMIN PANEL</h2>
-          <p>Manage squad · View completions</p>
-        </div>
+        <div><h2>ADMIN PANEL</h2><p>Manage squad · View completions</p></div>
       </div>
 
-      {/* Add player */}
       <div className="section-title">ADD PLAYER</div>
       <div className="add-form">
         <label className="lbl">Player Name</label>
         <input className="inp" placeholder="e.g. Ciarán Murphy" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlayer()} />
-        <button className="btn btn-green btn-sm" onClick={addPlayer} disabled={adding}>
-          {adding?"…":"+ ADD TO SQUAD"}
-        </button>
+        <button className="btn btn-green btn-sm" onClick={addPlayer} disabled={adding}>{adding?"…":"+ ADD TO SQUAD"}</button>
       </div>
 
-      {/* Registration status */}
       <div className="section-title">REGISTRATION STATUS</div>
       <div style={{display:"flex",gap:10,marginBottom:14}}>
         <div style={{flex:1,background:"#e8f5e9",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
@@ -2366,12 +2072,9 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
         </div>
       </div>
 
-      {/* Not yet registered */}
       {unclaimed.length > 0 && (
         <>
-          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#e65100",marginBottom:8}}>
-            ⏳ NOT YET REGISTERED ({unclaimed.length})
-          </div>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#e65100",marginBottom:8}}>⏳ NOT YET REGISTERED ({unclaimed.length})</div>
           {unclaimed.map(p => (
             <div key={p.id} className="player-row" style={{borderLeft:"3px solid #e65100"}}>
               <div className="player-av" style={{background:"#e65100"}}>{p.name[0]}</div>
@@ -2385,14 +2088,11 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
         </>
       )}
 
-      {/* Registered players with progress */}
       {claimed.length > 0 && (
         <>
-          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#2e7d32",marginBottom:8,marginTop:unclaimed.length>0?14:0}}>
-            ✅ REGISTERED & ACTIVE ({claimed.length})
-          </div>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"#2e7d32",marginBottom:8,marginTop:unclaimed.length>0?14:0}}>✅ REGISTERED & ACTIVE ({claimed.length})</div>
           {claimed.map(p => {
-            const c   = playerStats[p.id] || {};
+            const c = playerStats[p.id] || {};
             const pts = totalPts(c);
             const pct = Math.round((pts / maxPossible) * 100);
             return (
