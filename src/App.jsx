@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
@@ -634,7 +634,7 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "home" && (
-          <HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} />
+          <HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} userEmail={session?.user?.email} />
         )}
 
         {session && (player || isAdmin) && tab === "plan" && (
@@ -1028,7 +1028,7 @@ function EmailCoachesButton({ label = "📧 Message the Coaches", player }) {
 }
 
 
-function WAConsentButton({ waConsent, setWaConsent }) {
+function WAConsentButton({ waConsent, setWaConsent, userEmail, player }) {
   const [showModal, setShowModal] = useState(false);
   const [ticked, setTicked]       = useState(false);
 
@@ -1040,19 +1040,19 @@ function WAConsentButton({ waConsent, setWaConsent }) {
     }
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     try { localStorage.setItem("waConsent", "true"); } catch(e) {}
     setWaConsent(true);
     setShowModal(false);
-    // Log WhatsApp consent
+    // Log WhatsApp consent with who and when accepted
     try {
-      sb.from("audit_log").insert({
-        user_email: null,
-        player_id: null,
-        player_name: null,
+      await sb.from("audit_log").insert({
+        user_email: userEmail || null,
+        player_id: player?.id || null,
+        player_name: player?.name || null,
         action: "wa_consent_given",
         detail: "User agreed to WhatsApp group T&Cs and joined the group",
-        squad: null,
+        squad: player?.squad || null,
         old_value: null,
         new_value: new Date().toISOString(),
       });
@@ -1132,7 +1132,7 @@ function WAConsentButton({ waConsent, setWaConsent }) {
   );
 }
 
-function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, waConsent, setWaConsent }) {
+function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, waConsent, setWaConsent, userEmail }) {
   const [activeWk, setActiveWk] = useState(0);
   const streak = computeStreak(checks);
   const w = WEEKS[activeWk];
@@ -1196,7 +1196,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
           Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
         </div>
-        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} />
+        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} userEmail={userEmail} player={player} />
       </div>
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
@@ -2335,27 +2335,41 @@ function downloadCSV(allPlayers, ptsMap, weeklyMap) {
 function ConsentLog() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const CONSENT_START_DATE = "2026-06-26T00:00:00.000Z";
 
   useEffect(() => {
     sb.from("audit_log")
-      .select("user_email,player_name,action,detail,created_at,squad")
-      .in("action", ["tc_agreed_at_signup","wa_consent_given"])
+      .select("user_email,player_name,action,detail,created_at,new_value,squad")
+      .in("action", ["tc_agreed_at_signup", "tc_reaccepted", "wa_consent_given"])
+      .gte("created_at", CONSENT_START_DATE)
       .order("created_at", { ascending: false })
-      .then(({ data }) => { setRecords(data || []); setLoading(false); });
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Consent log load failed", error);
+          setRecords([]);
+        } else {
+          setRecords(data || []);
+        }
+        setLoading(false);
+      });
   }, []);
 
-  const tcCount = records.filter(r => r.action === "tc_agreed_at_signup").length;
+  const tcActions = ["tc_agreed_at_signup", "tc_reaccepted"];
+  const tcCount = records.filter(r => tcActions.includes(r.action)).length;
   const waCount = records.filter(r => r.action === "wa_consent_given").length;
 
   return (
     <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:14}}>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:6}}>
         CONSENT LOG
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,marginBottom:14}}>
+        Showing all T&amp;Cs accepted since 26/06/2026 and all WhatsApp consents recorded in the audit log.
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         <div style={{background:"#e3f2fd",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#1565c0"}}>{tcCount}</div>
-          <div style={{fontSize:11,color:"#1565c0",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>📋 T&Cs Agreed</div>
+          <div style={{fontSize:11,color:"#1565c0",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>📋 T&amp;Cs Agreed</div>
         </div>
         <div style={{background:"#e8f5e9",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#25a244"}}>{waCount}</div>
@@ -2364,18 +2378,23 @@ function ConsentLog() {
       </div>
       {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>Loading…</div>}
       {!loading && records.length === 0 && (
-        <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>No consent records yet</div>
+        <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>No consent records found since 26/06/2026</div>
       )}
       {!loading && records.map((r, i) => {
-        const isTc = r.action === "tc_agreed_at_signup";
-        const color = isTc ? "#1565c0" : "#25a244";
-        const bg    = isTc ? "#e3f2fd" : "#e8f5e9";
-        const icon  = isTc ? "📋" : "💬";
-        const label = isTc ? "T&Cs at signup" : "WhatsApp consent";
+        const isWhatsApp = r.action === "wa_consent_given";
+        const isReaccept = r.action === "tc_reaccepted";
+        const color = isWhatsApp ? "#25a244" : "#1565c0";
+        const bg    = isWhatsApp ? "#e8f5e9" : "#e3f2fd";
+        const icon  = isWhatsApp ? "💬" : "📋";
+        const label = isWhatsApp ? "WhatsApp consent" : isReaccept ? "T&Cs re-agreed" : "T&Cs at signup";
         const fullDate = r.created_at ? new Date(r.created_at).toLocaleString("en-IE", {
           day:"numeric", month:"short", year:"numeric",
           hour:"2-digit", minute:"2-digit"
         }) : "";
+        const acceptedAt = r.new_value ? new Date(r.new_value).toLocaleString("en-IE", {
+          day:"numeric", month:"short", year:"numeric",
+          hour:"2-digit", minute:"2-digit"
+        }) : fullDate;
         return (
           <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",
                                borderBottom:i<records.length-1?"1px solid #f8f0f0":"none"}}>
@@ -2384,19 +2403,23 @@ function ConsentLog() {
             <div style={{flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <div style={{fontSize:13,fontWeight:700,color:"var(--dark)"}}>
-                  {r.user_email || "Unknown"}
+                  {r.player_name || r.user_email || "Unknown"}
                 </div>
                 <div style={{fontSize:11,fontWeight:700,color:color,background:bg,
                              padding:"1px 8px",borderRadius:10}}>{label}</div>
               </div>
-              <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>🕐 {fullDate}</div>
+              <div style={{fontSize:11,color:"#555",marginTop:3}}>
+                {r.user_email || "No email recorded"}{r.squad ? ` · Squad: ${r.squad}` : ""}
+              </div>
+              <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>🕐 Accepted: {acceptedAt}</div>
+              {r.detail && <div style={{fontSize:10,color:"var(--muted)",marginTop:3,lineHeight:1.4}}>{r.detail}</div>}
             </div>
           </div>
         );
       })}
       <div style={{marginTop:14,padding:"10px 12px",background:"#f9f9f9",borderRadius:10,
                    fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
-        💡 These records are also stored permanently in your Supabase audit_log table and can be exported at any time.
+        💡 These records are stored permanently in your Supabase audit_log table and can be exported at any time.
       </div>
     </div>
   );
