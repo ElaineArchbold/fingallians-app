@@ -1052,14 +1052,16 @@ function WAConsentButton({ waConsent, setWaConsent, player }) {
     }
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     try { localStorage.setItem("waConsent", "true"); } catch(e) {}
     setWaConsent(true);
     setShowModal(false);
-    // Log WhatsApp consent
+
+    // Log WhatsApp consent before opening the group link so it appears in the Consent Log
     try {
-      sb.from("audit_log").insert({
-        user_email: null,
+      const { data: userData } = await sb.auth.getUser();
+      await sb.from("audit_log").insert({
+        user_email: userData?.user?.email || null,
         player_id: player?.id || null,
         player_name: player?.name || null,
         action: "wa_consent_given",
@@ -1068,7 +1070,10 @@ function WAConsentButton({ waConsent, setWaConsent, player }) {
         old_value: null,
         new_value: new Date().toISOString(),
       });
-    } catch(_) {}
+    } catch (e) {
+      console.error("WhatsApp consent log failed", e);
+    }
+
     window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
   }
 
@@ -2352,7 +2357,7 @@ function ConsentLog() {
   const [loading, setLoading] = useState(true);
 
   const tcActions = ["tc_agreed_at_signup", "tc_reaccepted"];
-  const waActions = ["wa_consent_given", "whatsapp_consent", "whatsapp_consent_given", "wa_joined"];
+  const waActions = ["wa_consent_given", "whatsapp_consent", "whatsapp_consent_given", "wa_joined", "wa_consent", "whatsapp_joined", "whatsapp_group_joined", "whatsapp_invite_clicked"];
 
   useEffect(() => {
     async function loadConsentLog() {
@@ -2363,14 +2368,14 @@ function ConsentLog() {
         .select("user_email,player_name,action,detail,created_at,new_value,squad")
         .in("action", [...tcActions, ...waActions])
         .gte("created_at", CONSENT_START_DATE)
+        .or(`squad.eq.${APP_SQUAD},squad.is.null`)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Consent log load failed", error);
         setRecords([]);
       } else {
-        const filtered = (data || []).filter(r => !r.squad || r.squad === APP_SQUAD);
-        setRecords(filtered);
+        setRecords(data || []);
       }
 
       setLoading(false);
