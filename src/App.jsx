@@ -2342,19 +2342,14 @@ function ConsentLog() {
     async function loadConsentLog() {
       setLoading(true);
 
-      const { data, error } = await sb
-        .from("audit_log")
-        .select("user_email,player_name,action,detail,created_at,new_value,squad")
-        .in("action", [
-          "tc_agreed_at_signup",
-          "tc_reaccepted",
-          "wa_consent_given",
-          "whatsapp_consent",
-          "whatsapp_consent_given",
-          "wa_joined"
-        ])
-        .gte("created_at", CONSENT_START_DATE)
-        .order("created_at", { ascending: false });
+    const { data, error } = await sb
+  .from("audit_log")
+  .select("*")
+  .gte("created_at", "2026-06-26T00:00:00.000Z")
+  .order("created_at", { ascending: false });
+
+console.log("Audit log:", data);
+console.log("Error:", error);
 
       if (error) {
         console.error("Consent log load failed", error);
