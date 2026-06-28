@@ -1107,10 +1107,10 @@ function WAConsentButton({ waConsent, setWaConsent, player, userEmail }) {
     if (waConsent) {
       // Consent may exist in browser storage from before audit logging worked.
       // Record/backfill it, then open WhatsApp.
-      const popup = window.open("", "_blank", "noopener,noreferrer");
-      await recordWhatsAppConsent();
-      if (popup) popup.location.href = WHATSAPP_LINK;
-      else window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
+      // Mobile browsers handle this best when the actual WhatsApp link is opened directly.
+      // Fire the audit log without blocking the user click/open action.
+      recordWhatsAppConsent();
+      window.location.href = WHATSAPP_LINK;
     } else {
       setShowModal(true);
     }
@@ -1124,10 +1124,10 @@ function WAConsentButton({ waConsent, setWaConsent, player, userEmail }) {
     setShowModal(false);
 
     // Open the tab immediately so browsers do not block it, then log consent.
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    await recordWhatsAppConsent();
-    if (popup) popup.location.href = WHATSAPP_LINK;
-    else window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
+    // Mobile browsers handle this best when the actual WhatsApp link is opened directly.
+    // Fire the audit log without blocking the user click/open action.
+    recordWhatsAppConsent();
+    window.location.href = WHATSAPP_LINK;
   }
 
   return (
