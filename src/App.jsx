@@ -34,7 +34,7 @@ async function logAudit(userEmail, player, action, detail, oldValue = null, newV
       old_value:   oldValue  ? String(oldValue)  : null,
       new_value:   newValue  ? String(newValue)  : null,
     });
-    if (error) console.error("audit_log insert error:", error);
+    if (error) console.error("audit_log error:", error.message, error.details);
   } catch (e) {
     console.error("audit_log exception:", e);
   }
@@ -636,7 +636,7 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "home" && (
-          <HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} />
+<HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} session={session} />
         )}
 
         {session && (player || isAdmin) && tab === "plan" && (
@@ -1030,7 +1030,7 @@ function EmailCoachesButton({ label = "📧 Message the Coaches", player }) {
 }
 
 
-function WAConsentButton({ waConsent, setWaConsent }) {
+function WAConsentButton({ waConsent, setWaConsent, session, player }) {
   const [showModal, setShowModal] = useState(false);
   const [ticked, setTicked]       = useState(false);
 
@@ -1043,24 +1043,17 @@ function WAConsentButton({ waConsent, setWaConsent }) {
   }
 
   function handleConfirm() {
-    try { localStorage.setItem("waConsent", "true"); } catch(e) {}
-    setWaConsent(true);
-    setShowModal(false);
-    // Log WhatsApp consent
-    try {
-      sb.from("audit_log").insert({
-        user_email: null,
-        player_id: null,
-        player_name: null,
-        action: "wa_consent_given",
-        detail: "User agreed to WhatsApp group T&Cs and joined the group",
-        squad: null,
-        old_value: null,
-        new_value: new Date().toISOString(),
-      });
-    } catch(_) {}
-    window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
-  }
+  try { localStorage.setItem("waConsent", "true"); } catch(e) {}
+  setWaConsent(true);
+  setShowModal(false);
+  logAudit(
+    session?.user?.email || null,
+    player || null,
+    "wa_consent_given",
+    "User agreed to WhatsApp group T&Cs and joined the group"
+  );
+  window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
+}
 
   return (
     <>
@@ -1198,7 +1191,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
           Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
         </div>
-        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} />
+<WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} session={session} player={player} />
       </div>
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
@@ -2762,8 +2755,9 @@ async function logAudit(userEmail, player, action, detail, oldValue = null, newV
       user_email:  userEmail,
       player_id:   player?.id   || null,
       player_name: player?.name || null,
-      action,
+         action,
       detail,
+      squad:       "2014",
       old_value:   oldValue  ? String(oldValue)  : null,
       new_value:   newValue  ? String(newValue)  : null,
     });
@@ -3866,7 +3860,7 @@ function WAConsentButton({ waConsent, setWaConsent }) {
   );
 }
 
-function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, waConsent, setWaConsent }) {
+function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, waConsent, setWaConsent, session }) {
   const [activeWk, setActiveWk] = useState(0);
   const streak = computeStreak(checks);
   const w = WEEKS[activeWk];
