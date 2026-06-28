@@ -1427,11 +1427,14 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
             </div>
             {expandedSquad && (
               <div className="squad-body">
-                <p className="squad-desc">{w.squad.desc}</p>
-                <div className="squad-cta">👥 Get 3–4 lads together — this is your highest scoring task!</div>
-                {/* Three drill videos for this week */}
-                
+                <p className="squad-desc">{w.squad.desc}</p>                <div className="squad-cta">👥 Get 3–4 lads together — this is your highest scoring task!</div>
 
+                {canToggle && (
+                  <button className={`squad-mark${done?" done":""}`} onClick={()=>onToggle(k,PTS.squad,w.squad.label)}>
+                    {done?"✕ MARK INCOMPLETE":"✓ SQUAD SESSION DONE"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         );
