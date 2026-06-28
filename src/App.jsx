@@ -1112,7 +1112,6 @@ function WAConsentButton({ waConsent, setWaConsent, player, userEmail }) {
 
   function handleClick() {
     if (waConsent) {
-      // Already agreed on this device. Still backfill/log once if missing, then open the group.
       openWhatsAppAfterLogging();
     } else {
       setTicked(false);
