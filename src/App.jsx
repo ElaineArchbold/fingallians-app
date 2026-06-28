@@ -52,16 +52,20 @@ const WEEKS = [
     runs:[{label:"Run 1",distance:"2k"},{label:"Run 2",distance:"2k"},{label:"Run 3",distance:"2.5k"}],
     speed:[{id:"s1a",label:"⚡ Fall Forward",desc:"Practise for 10 minutes at least once this week. Learn the name: Fall Forward. We will be using this in training — know it and own it!",youtube_id:"PTmWJ4kk0yE"}],
     skills:[
+      {id:"h1a",label:"🏑 Roll Lift",desc:"20 minutes at least once this week. Roll the sliotar along the ground and scoop it cleanly with the hurl. Practise off both sides. Remember the name: Roll Lift — coaches will use this term in training.",youtube_id:"Beu3_ecp53Q"},
       {id:"f1a",label:"⚽ The Solo",desc:"20 minutes at least once this week. Solo the ball — bounce and toe-tap alternating, both feet. Keep it clean and controlled. Remember the name: The Solo.",youtube_id:"MZwQ695hqgk"},
     ],
+    squad:{label:"Squad Session – Speed Mechanics & Skills",desc:"Get 3–4 lads together. (1) 5 mins: practise Fall Forward as a group — who gets the best lean? (2) Hurling: Roll Lift relay — clean lifts in a row. (3) Football: Solo relay — who can go furthest without dropping?",youtube_id:"PTmWJ4kk0yE"},
   },
   {
     week:2, phase:"Foundation", dates:"Jul 6–12",
     runs:[{label:"Run 1",distance:"2k"},{label:"Run 2",distance:"2.5k"},{label:"Run 3",distance:"2.5k"}],
     speed:[{id:"s2a",label:"⚡ Stationary Arm Swing",desc:"Practise for 10 minutes at least once this week. Learn the name: Stationary Arm Swing. Arms drive the legs — get this right and your speed improves. Coaches will use this in training.",youtube_id:"NUmUwXqG1pE"}],
     skills:[
+      {id:"h2a",label:"🏑 Jab Lift",desc:"20 minutes at least once this week. Jab the hurl under the sliotar and flick it up cleanly. Aim for 10 in a row without dropping. Remember the name: Jab Lift.",youtube_id:"ob1hmrWKI58"},
       {id:"f2a",label:"⚽ Hook Kick",desc:"20 minutes at least once this week. Hook kick off the wall, both feet. Focus on clean contact and controlled return. Remember the name: Hook Kick.",youtube_id:"Vjp2oeXWB3c"},
     ],
+    squad:{label:"Squad Session – Arm Swing & Lifting",desc:"(1) 5 mins: Stationary Arm Swing together — keep elbows at 90°, drive through. (2) Hurling: Jab Lift competition — most in a row wins. (3) Football: Hook Kick pairs — count clean takes. Record group total.",youtube_id:"NUmUwXqG1pE"},
   },
   {
     week:3, phase:"Building", dates:"Jul 13–19",
@@ -69,7 +73,9 @@ const WEEKS = [
     speed:[{id:"s3a",label:"⚡ A Skip",desc:"Practise for 10 minutes at least once this week. Learn the name: A Skip. High knees, rhythmic skip — this is a core speed drill. Coaches will use this term in training.",youtube_id:"2I4rDiFs6Ec"}],
     skills:[
       {id:"h3a",label:"🏑 Wall Strike and Control",desc:"20 minutes at least once this week. Strike the sliotar off the wall and control the return. Both sides. No stopping between touches. Remember the name: Wall Strike and Control.",youtube_id:"XVFP1xHeNo4"},
+      {id:"f3a",label:"⚽ Hop Solo Dummy",desc:"20 minutes at least once this week. Hop solo, add a dummy step, drive away. Both feet. Count clean sequences. Remember the name: Hop Solo Dummy.",youtube_id:"0ezRQmcRWvM"},
     ],
+    squad:{label:"Squad Session – A Skip & Strike",desc:"(1) 5 mins: A Skip — get the rhythm right as a group, coaches will check technique in training. (2) Hurling: Wall Strike relay — each takes turns, count clean strikes. (3) Football: Hop Solo Dummy — chain 5 sequences without a drop, how many can manage it?",youtube_id:"2I4rDiFs6Ec"},
   },
   {
     week:4, phase:"Building", dates:"Jul 20–26",
@@ -79,6 +85,7 @@ const WEEKS = [
       {id:"h4a",label:"🏑 Overhead Catch",desc:"20 minutes at least once this week. Toss the sliotar and catch it cleanly above your head — both hands, eyes up. Build height and confidence. Remember the name: Overhead Catch.",youtube_id:"WMM6C3eFuIE"},
       {id:"f4a",label:"⚽ Punt Kick",desc:"20 minutes at least once this week. Punt kick off the wall or to a partner — both feet, clean contact. Distance and accuracy. Remember the name: Punt Kick.",youtube_id:"qsq61w-XWDg"},
     ],
+    squad:{label:"Squad Session – Ankling & Catching",desc:"(1) 5 mins: Ankling Drill as a group — fast feet, stay low, coaches will check this in training. (2) Hurling: Overhead Catch — take turns, who gets the cleanest take at height? (3) Football: Punt Kick competition — 5 attempts each, count scores. Group total?",youtube_id:"11xHsMcomf4"},
   },
   {
     week:5, phase:"Push", dates:"Jul 27–Aug 2",
@@ -88,6 +95,7 @@ const WEEKS = [
       {id:"h5a",label:"🏑 Strike from the Hand",desc:"20 minutes at least once this week. Strike off both sides from the hand — aim for below shoulder height. Count clean consecutive strikes. Remember the name: Strike from the Hand.",youtube_id:"A4qGKdeviHU"},
       {id:"f5a",label:"⚽ Wall Hand Pass",desc:"20 minutes at least once this week. Hand-pass off the wall, catch the return, repeat. Both hands. Stay close, then back off for power. Remember the name: Wall Hand Pass.",youtube_id:"vd3Z9t2G64Y"},
     ],
+    squad:{label:"Squad Session – A March & Striking",desc:"(1) 5 mins: A March as a group — high knees, strong hip drive. (2) Hurling: Strike from the Hand relay — clean strikes in a row, both sides. (3) Football: Wall Hand Pass — pairs, count takes in 2 mins. Who gets the most?",youtube_id:"HISmA4pZWp0"},
   },
   {
     week:6, phase:"Push", dates:"Aug 3–9",
@@ -97,6 +105,7 @@ const WEEKS = [
       {id:"h6a",label:"🏑 Accurate Scoring Points",desc:"20 minutes at least once this week. Take 10 frees from different positions — count your score. Can you get 7+ out of 10? Remember the term: Accurate Scoring.",youtube_id:"sZ5Pz5-2u9w"},
       {id:"f6a",label:"⚽ Toe Tap Left & Right",desc:"20 minutes at least once this week. Alternate toe taps on the ball — left foot, right foot, keep going. Build balance and touch. Remember the name: Toe Tap Left & Right.",youtube_id:"y21NxFXv8LQ"},
     ],
+    squad:{label:"Squad Session – Butt Kicks & Scoring",desc:"(1) 5 mins: Butt Kicks — heel up, drive the cycle, coaches will be watching for this. (2) Hurling: Scoring challenge — each lad takes 5 frees, group total. Can you beat last week? (3) Football: Toe Tap relay — 30 seconds each, who keeps the cleanest rhythm?",youtube_id:"p7OBdAJu9E8"},
   },
   {
     week:7, phase:"Peak", dates:"Aug 10–16",
@@ -106,6 +115,7 @@ const WEEKS = [
       {id:"h7a",label:"🏑 Shoot Off the Back Foot",desc:"20 minutes at least once this week. Receive the ball on the run and shoot off the back foot — both sides. Builds game-speed decision making. Remember the name: Shoot Off the Back Foot.",youtube_id:"O011YgOLmPI"},
       {id:"f7a",label:"⚽ Solo Run",desc:"20 minutes at least once this week. Full-pace solo run — bounce and toe-tap at speed, both feet. Count clean touches over 40m. Remember the name: Solo Run.",youtube_id:"31SRiMTiiK4"},
     ],
+    squad:{label:"Squad Session – Wall Knee Drive & Shooting",desc:"(1) 5 mins: Wall Knee Drive as a group — explosive drive, coaches will test power in September. (2) Hurling: Shoot Off the Back Foot — each takes 5 attempts, group score. (3) Football: Solo Run relay — full pace, who drops the least over 40m?",youtube_id:"ZW9rjy9TgGM"},
   },
   {
     week:8, phase:"Peak", dates:"Aug 17–23",
@@ -115,6 +125,7 @@ const WEEKS = [
       {id:"h8a",label:"🏑 Strike on the Run",desc:"20 minutes at least once this week. Strike the sliotar cleanly on the move — both sides, full pace. This is your final session before assessment. Remember the name: Strike on the Run.",youtube_id:"VaeNZnWYvA4"},
       {id:"f8a",label:"⚽ Free Taking Drill",desc:"20 minutes at least once this week. Take frees from multiple positions around the D and 20m line — count your score. Compare to Week 6. Remember the name: Free Taking Drill.",youtube_id:"kqng-SW8j4Y"},
     ],
+    squad:{label:"Squad Session – Final Challenge",desc:"Final squad session before September. (1) 5 mins: 3 Point Start — explosive off the mark, coaches will test sprint times in September. (2) Hurling: Strike on the Run — 5 attempts each, group total. Compare to Week 3! (3) Football: Free Taking — 5 shots each, group total. Compare to Week 6! Screenshot and send to coaches 📸",youtube_id:"rJ7SbSqqKS0"},
   },
 ];
 
@@ -1422,7 +1433,30 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
                 <p className="squad-desc">{w.squad.desc}</p>
                 <div className="squad-cta">👥 Get 3–4 lads together — this is your highest scoring task!</div>
                 {/* Three drill videos for this week */}
-</>
+                <div style={{display:"flex",gap:8,marginBottom:12}}>
+                  {[
+                    ...w.speed.map(s => ({ ytId: s.youtube_id, label: s.label.replace(/^⚡\s*/,"") })),
+                    ...w.skills.map(s => ({ ytId: s.youtube_id, label: s.label.replace(/^[🏑⚽]\s*/,"") })),
+                  ].slice(0,3).map((v, idx) => {
+                    const vidKey = `squad-${idx}`;
+                    const thumbUrl = v.ytId && !v.ytId.startsWith("Demo")
+                      ? `https://img.youtube.com/vi/${v.ytId}/hqdefault.jpg`
+                      : null;
+                    return (
+                      <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                        <div style={{position:"relative",paddingBottom:"56.25%",borderRadius:8,overflow:"hidden",background:"#000",cursor:"pointer"}}
+                          onClick={() => setPlayingVideo(playingVideo === vidKey ? null : vidKey)}>
+                          {playingVideo === vidKey ? (
+                            <iframe
+                              style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}}
+                              src={`https://www.youtube.com/embed/${v.ytId}?autoplay=1&rel=0`}
+                              allow="autoplay; encrypted-media" allowFullScreen />
+                          ) : thumbUrl ? (
+                            <>
+                              <img src={thumbUrl} alt="" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover"}} />
+                              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}} />
+                              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:28,height:28,borderRadius:"50%",background:"rgba(255,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>▶</div>
+                            </>
                           ) : (
                             <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4a0a0e,#1a0405)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
                           )}
@@ -2618,21 +2652,8 @@ function DashboardTab({ allPlayers }) {
             );
           })}
         </div>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {[
-              {label:"Pre-summer timed", value:stats.preTimes,  color:"#1565c0"},
-              {label:"Post-summer timed",value:stats.postTimes, color:"#2e7d32"},
-            ].map(s=>(
-              <div key={s.label} style={{background:"var(--g3)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,color:s.color}}>{s.value}</div>
-                <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{s.label}</div>
-                <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>of {stats.total} players</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {stats.total - stats.registered > 0 && (
+                {stats.total - stats.registered > 0 && (
           <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>
               ⏳ NOT YET REGISTERED ({stats.total - stats.registered})
@@ -2788,14 +2809,6 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
         <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
       </div>
 
-      <div className="card" style={{marginTop:20}}>
-        <div className="card-bd" style={{fontSize:13,color:"var(--mid)",lineHeight:1.7}}>
-          To add real drill videos, edit the <code style={{background:"#f0f0f0",padding:"1px 5px",borderRadius:4}}>WEEKS</code> array at the top of this file.
-          <div style={{marginTop:10,padding:"10px 12px",background:"#f0f7f1",borderRadius:8}}>
-            e.g. youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong> → use <strong>dQw4w9WgXcQ</strong>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
