@@ -396,7 +396,7 @@ function TCReacceptModal({ userEmail, onAccepted }) {
         user_email: userEmail,
         player_id: null,
         player_name: null,
-        action: "tc_agreed_at_signup",
+        action: "tc_reaccepted",
         detail: "User agreed to updated Terms & Conditions (v2 — includes WhatsApp, photography, coaching group disclaimer)",
         squad: null,
         old_value: null,
@@ -1046,7 +1046,7 @@ function WAConsentButton({ waConsent, setWaConsent, userEmail, player }) {
     setShowModal(false);
     // Log WhatsApp consent with who and when accepted
     try {
-      await sb.from("audit_log").insert({
+      const { error } = await sb.from("audit_log").insert({
         user_email: userEmail || null,
         player_id: player?.id || null,
         player_name: player?.name || null,
@@ -1056,7 +1056,10 @@ function WAConsentButton({ waConsent, setWaConsent, userEmail, player }) {
         old_value: null,
         new_value: new Date().toISOString(),
       });
-    } catch(_) {}
+      if (error) console.error("WhatsApp consent log failed", error);
+    } catch(e) {
+      console.error("WhatsApp consent log failed", e);
+    }
     window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
   }
 
@@ -2342,14 +2345,16 @@ function ConsentLog() {
     async function loadConsentLog() {
       setLoading(true);
 
-    const { data, error } = await sb
-  .from("audit_log")
-  .select("*")
-  .gte("created_at", "2026-06-26T00:00:00.000Z")
-  .order("created_at", { ascending: false });
-
-console.log("Audit log:", data);
-console.log("Error:", error);
+      const { data, error } = await sb
+        .from("audit_log")
+        .select("user_email,player_name,action,detail,created_at,new_value,squad")
+        .in("action", [
+          "tc_agreed_at_signup",
+          "tc_reaccepted",
+          "wa_consent_given"
+        ])
+        .gte("created_at", CONSENT_START_DATE)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Consent log load failed", error);
@@ -2367,13 +2372,7 @@ console.log("Error:", error);
   const isTcAction = action =>
     ["tc_agreed_at_signup", "tc_reaccepted"].includes(action);
 
-  const isWaAction = action =>
-    [
-      "wa_consent_given",
-      "whatsapp_consent",
-      "whatsapp_consent_given",
-      "wa_joined"
-    ].includes(action);
+  const isWaAction = action => action === "wa_consent_given";
 
   const tcCount = records.filter(r => isTcAction(r.action)).length;
   const waCount = records.filter(r => isWaAction(r.action)).length;
