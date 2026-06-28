@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
@@ -24,19 +24,17 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ── Audit logging helper ──────────────────────────────────────────────────────
 async function logAudit(userEmail, player, action, detail, oldValue = null, newValue = null) {
   try {
-    const { error } = await sb.from("audit_log").insert({
+    await sb.from("audit_log").insert({
       user_email:  userEmail,
       player_id:   player?.id   || null,
       player_name: player?.name || null,
       action,
       detail,
-      squad:       "2014",
       old_value:   oldValue  ? String(oldValue)  : null,
       new_value:   newValue  ? String(newValue)  : null,
     });
-    if (error) console.error("audit_log error:", error.message, error.details);
-  } catch (e) {
-    console.error("audit_log exception:", e);
+  } catch (_) {
+    // Audit failure should never break the main action
   }
 }
 
@@ -636,7 +634,7 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "home" && (
-<HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} session={session} />
+          <HomeTab player={player} checks={checks} pts={pts} weeksDone={weeksDone} onNav={() => setTab("plan")} onToggle={toggleTask} showToast={showToast} waConsent={waConsent} setWaConsent={setWaConsent} />
         )}
 
         {session && (player || isAdmin) && tab === "plan" && (
@@ -1030,7 +1028,7 @@ function EmailCoachesButton({ label = "📧 Message the Coaches", player }) {
 }
 
 
-function WAConsentButton({ waConsent, setWaConsent, session, player }) {
+function WAConsentButton({ waConsent, setWaConsent }) {
   const [showModal, setShowModal] = useState(false);
   const [ticked, setTicked]       = useState(false);
 
@@ -1043,17 +1041,24 @@ function WAConsentButton({ waConsent, setWaConsent, session, player }) {
   }
 
   function handleConfirm() {
-  try { localStorage.setItem("waConsent", "true"); } catch(e) {}
-  setWaConsent(true);
-  setShowModal(false);
-  logAudit(
-    session?.user?.email || null,
-    player || null,
-    "wa_consent_given",
-    "User agreed to WhatsApp group T&Cs and joined the group"
-  );
-  window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
-}
+    try { localStorage.setItem("waConsent", "true"); } catch(e) {}
+    setWaConsent(true);
+    setShowModal(false);
+    // Log WhatsApp consent
+    try {
+      sb.from("audit_log").insert({
+        user_email: null,
+        player_id: null,
+        player_name: null,
+        action: "wa_consent_given",
+        detail: "User agreed to WhatsApp group T&Cs and joined the group",
+        squad: null,
+        old_value: null,
+        new_value: new Date().toISOString(),
+      });
+    } catch(_) {}
+    window.open(WHATSAPP_LINK, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <>
@@ -1191,7 +1196,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
           Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
         </div>
-<WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} session={session} player={player} />
+        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} />
       </div>
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
