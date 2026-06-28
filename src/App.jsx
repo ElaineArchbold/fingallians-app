@@ -11,6 +11,8 @@ const ADMIN_EMAILS = [
 const SUPER_ADMIN_EMAIL = "e.t.archbold@gmail.com";
 const FORMSPREE_URL     = "https://formspree.io/f/mrewqpqo";
 const WHATSAPP_LINK     = "https://chat.whatsapp.com/F3A0lBj6293JQD2oghSoAx";
+const APP_SQUAD         = "2014 Boys";
+const CONSENT_START_DATE = "2026-06-26T00:00:00.000Z";
 
 // Admin accounts that should be auto-linked to a player by name
 const ADMIN_PLAYER_NAMES = {
@@ -30,6 +32,7 @@ async function logAudit(userEmail, player, action, detail, oldValue = null, newV
       player_name: player?.name || null,
       action,
       detail,
+      squad: APP_SQUAD,
       old_value:   oldValue  ? String(oldValue)  : null,
       new_value:   newValue  ? String(newValue)  : null,
     });
@@ -398,7 +401,7 @@ function TCReacceptModal({ userEmail, onAccepted }) {
         player_name: null,
         action: "tc_agreed_at_signup",
         detail: "User agreed to updated Terms & Conditions (v2 — includes WhatsApp, photography, coaching group disclaimer)",
-        squad: null,
+        squad: APP_SQUAD,
         old_value: null,
         new_value: new Date().toISOString(),
       });
@@ -511,8 +514,9 @@ export default function App() {
       if (link?.player_id) {
         const { data: playerData } = await sb
           .from("players")
-          .select("id, name")
+          .select("id, name, squad")
           .eq("id", link.player_id)
+          .eq("squad", APP_SQUAD)
           .maybeSingle();
         if (playerData) {
           setPlayer(playerData);
@@ -532,7 +536,11 @@ export default function App() {
   }
 
   async function loadAllPlayers() {
-    const { data } = await sb.from("players").select("id,name").order("name");
+    const { data } = await sb
+      .from("players")
+      .select("id,name,squad")
+      .eq("squad", APP_SQUAD)
+      .order("name");
     setAllPlayers(data || []);
   }
 
@@ -707,7 +715,7 @@ function AuthScreen({ showToast }) {
           player_name: null,
           action: "tc_agreed_at_signup",
           detail: "User agreed to Terms & Conditions at account creation",
-          squad: null,
+          squad: APP_SQUAD,
           old_value: null,
           new_value: new Date().toISOString(),
         });
@@ -863,7 +871,11 @@ function LinkPlayerScreen({ onLink }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    sb.from("players").select("id,name").order("name").then(({ data }) => {
+    sb.from("players")
+      .select("id,name,squad")
+      .eq("squad", APP_SQUAD)
+      .order("name")
+      .then(({ data }) => {
       setPlayers(data || []);
       setLoading(false);
     });
@@ -1028,7 +1040,7 @@ function EmailCoachesButton({ label = "📧 Message the Coaches", player }) {
 }
 
 
-function WAConsentButton({ waConsent, setWaConsent }) {
+function WAConsentButton({ waConsent, setWaConsent, player }) {
   const [showModal, setShowModal] = useState(false);
   const [ticked, setTicked]       = useState(false);
 
@@ -1048,11 +1060,11 @@ function WAConsentButton({ waConsent, setWaConsent }) {
     try {
       sb.from("audit_log").insert({
         user_email: null,
-        player_id: null,
-        player_name: null,
+        player_id: player?.id || null,
+        player_name: player?.name || null,
         action: "wa_consent_given",
         detail: "User agreed to WhatsApp group T&Cs and joined the group",
-        squad: null,
+        squad: APP_SQUAD,
         old_value: null,
         new_value: new Date().toISOString(),
       });
@@ -1196,7 +1208,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
           Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
         </div>
-        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} />
+        <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} player={player} />
       </div>
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
@@ -1781,7 +1793,10 @@ function ScoresTab() {
 
   useEffect(() => {
     async function load() {
-      const { data: players } = await sb.from("players").select("id,name");
+      const { data: players } = await sb
+        .from("players")
+        .select("id,name,squad")
+        .eq("squad", APP_SQUAD);
       const { data: comps }   = await sb.from("task_completions").select("player_id,task_key");
       if (!players) return;
       const statsMap = {};
@@ -2336,46 +2351,83 @@ function ConsentLog() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const tcActions = ["tc_agreed_at_signup", "tc_reaccepted"];
+  const waActions = ["wa_consent_given", "whatsapp_consent", "whatsapp_consent_given", "wa_joined"];
+
   useEffect(() => {
-    sb.from("audit_log")
-      .select("user_email,player_name,action,detail,created_at,squad")
-      .in("action", ["tc_agreed_at_signup","wa_consent_given"])
-      .order("created_at", { ascending: false })
-      .then(({ data }) => { setRecords(data || []); setLoading(false); });
+    async function loadConsentLog() {
+      setLoading(true);
+
+      const { data, error } = await sb
+        .from("audit_log")
+        .select("user_email,player_name,action,detail,created_at,new_value,squad")
+        .in("action", [...tcActions, ...waActions])
+        .gte("created_at", CONSENT_START_DATE)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Consent log load failed", error);
+        setRecords([]);
+      } else {
+        const filtered = (data || []).filter(r => !r.squad || r.squad === APP_SQUAD);
+        setRecords(filtered);
+      }
+
+      setLoading(false);
+    }
+
+    loadConsentLog();
   }, []);
 
-  const tcCount = records.filter(r => r.action === "tc_agreed_at_signup").length;
-  const waCount = records.filter(r => r.action === "wa_consent_given").length;
+  const tcCount = records.filter(r => tcActions.includes(r.action)).length;
+  const waCount = records.filter(r => waActions.includes(r.action)).length;
 
   return (
     <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
-      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:14}}>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:6}}>
         CONSENT LOG
       </div>
+      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,marginBottom:14}}>
+        Showing all app T&amp;Cs and WhatsApp consents recorded since 26/06/2026 for {APP_SQUAD}. Older records without a squad are included where available.
+      </div>
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         <div style={{background:"#e3f2fd",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#1565c0"}}>{tcCount}</div>
-          <div style={{fontSize:11,color:"#1565c0",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>📋 T&Cs Agreed</div>
+          <div style={{fontSize:11,color:"#1565c0",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>📋 App T&amp;Cs</div>
         </div>
         <div style={{background:"#e8f5e9",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:"#25a244"}}>{waCount}</div>
           <div style={{fontSize:11,color:"#25a244",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>💬 WhatsApp Consent</div>
         </div>
       </div>
+
       {loading && <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>Loading…</div>}
+
       {!loading && records.length === 0 && (
-        <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>No consent records yet</div>
+        <div style={{textAlign:"center",color:"var(--muted)",padding:"16px 0",fontSize:13}}>
+          No consent records found since 26/06/2026
+        </div>
       )}
+
       {!loading && records.map((r, i) => {
-        const isTc = r.action === "tc_agreed_at_signup";
-        const color = isTc ? "#1565c0" : "#25a244";
-        const bg    = isTc ? "#e3f2fd" : "#e8f5e9";
-        const icon  = isTc ? "📋" : "💬";
-        const label = isTc ? "T&Cs at signup" : "WhatsApp consent";
-        const fullDate = r.created_at ? new Date(r.created_at).toLocaleString("en-IE", {
+        const isWhatsApp = waActions.includes(r.action);
+        const isReaccept = r.action === "tc_reaccepted";
+        const color = isWhatsApp ? "#25a244" : "#1565c0";
+        const bg    = isWhatsApp ? "#e8f5e9" : "#e3f2fd";
+        const icon  = isWhatsApp ? "💬" : "📋";
+        const label = isWhatsApp ? "WhatsApp consent" : isReaccept ? "T&Cs re-agreed" : "T&Cs at signup";
+
+        const createdAt = r.created_at ? new Date(r.created_at).toLocaleString("en-IE", {
           day:"numeric", month:"short", year:"numeric",
           hour:"2-digit", minute:"2-digit"
         }) : "";
+
+        const acceptedAt = r.new_value ? new Date(r.new_value).toLocaleString("en-IE", {
+          day:"numeric", month:"short", year:"numeric",
+          hour:"2-digit", minute:"2-digit"
+        }) : createdAt;
+
         return (
           <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",
                                borderBottom:i<records.length-1?"1px solid #f8f0f0":"none"}}>
@@ -2384,19 +2436,31 @@ function ConsentLog() {
             <div style={{flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <div style={{fontSize:13,fontWeight:700,color:"var(--dark)"}}>
-                  {r.user_email || "Unknown"}
+                  {r.player_name || r.user_email || "Unknown"}
                 </div>
                 <div style={{fontSize:11,fontWeight:700,color:color,background:bg,
                              padding:"1px 8px",borderRadius:10}}>{label}</div>
               </div>
-              <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>🕐 {fullDate}</div>
+
+              <div style={{fontSize:11,color:"#555",marginTop:3}}>
+                {r.user_email || "No email recorded"}{r.squad ? ` · Squad: ${r.squad}` : " · Squad not logged"}
+              </div>
+
+              <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>🕐 Accepted: {acceptedAt}</div>
+
+              {r.detail && (
+                <div style={{fontSize:10,color:"var(--muted)",marginTop:3,lineHeight:1.4}}>
+                  {r.detail}
+                </div>
+              )}
             </div>
           </div>
         );
       })}
+
       <div style={{marginTop:14,padding:"10px 12px",background:"#f9f9f9",borderRadius:10,
                    fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
-        💡 These records are also stored permanently in your Supabase audit_log table and can be exported at any time.
+        💡 New consent records are stored with squad set to {APP_SQUAD}. Older audit rows that did not save squad are still shown where available.
       </div>
     </div>
   );
@@ -2417,7 +2481,7 @@ function DashboardTab({ allPlayers }) {
     Promise.all([
       sb.from("task_completions").select("player_id,task_key,completed_at").in("player_id", ids),
       sb.from("parent_players").select("player_id"),
-      sb.from("audit_log").select("user_email,player_name,action,detail,created_at").order("created_at",{ascending:false}).limit(20),
+      sb.from("audit_log").select("user_email,player_name,action,detail,created_at,squad").order("created_at",{ascending:false}).limit(100),
       sb.from("fitness_tests").select("player_id,period,lap_time").in("player_id", ids),
     ]).then(([{data:comps},{data:links},{data:logs},{data:fitness}]) => {
       const byPlayer = {};
@@ -2432,7 +2496,7 @@ function DashboardTab({ allPlayers }) {
       setWeeklyMap(wm);
 
       setClaimedIds(new Set(links?.map(l => l.player_id) || []));
-      setRecentLog(logs || []);
+      setRecentLog((logs || []).filter(r => !r.squad || r.squad === APP_SQUAD).slice(0, 20));
 
       const totalSessions = comps?.length || 0;
       const playersActive = new Set(comps?.map(r => r.player_id)).size;
@@ -2632,7 +2696,7 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
   async function addPlayer() {
     if (!newName.trim()) return;
     setAdding(true);
-    const { error } = await sb.from("players").insert({ name: newName.trim() });
+    const { error } = await sb.from("players").insert({ name: newName.trim(), squad: APP_SQUAD });
     if (error) { showToast("❌ Error adding player"); }
     else { showToast(`✅ ${newName.trim()} added!`); setNewName(""); onRefresh(); }
     setAdding(false);
@@ -2640,7 +2704,7 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
 
   async function removePlayer(id, name) {
     if (!window.confirm(`Remove ${name} from the squad list?`)) return;
-    await sb.from("players").delete().eq("id", id);
+    await sb.from("players").delete().eq("id", id).eq("squad", APP_SQUAD);
     showToast(`🗑️ ${name} removed`);
     onRefresh();
   }
