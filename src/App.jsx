@@ -471,9 +471,62 @@ function TCReacceptModal({ userEmail, onAccepted }) {
 }
 
 
-function ChildVersionComingSoon({ showToast }) {
-  function comingSoon() {
-    showToast("Child version links are coming soon.");
+
+function makeChildAccessToken() {
+  try {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch (_) {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 18)}`;
+  }
+}
+
+function ChildVersionComingSoon({ player, showToast }) {
+  const [token, setToken] = useState(player?.child_access_token || "");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setToken(player?.child_access_token || "");
+  }, [player?.id, player?.child_access_token]);
+
+  async function copyChildLink() {
+    if (!player?.id) {
+      showToast("Select a player first.");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      let nextToken = token;
+
+      if (!nextToken) {
+        nextToken = makeChildAccessToken();
+
+        const { error } = await sb
+          .from("players")
+          .update({ child_access_token: nextToken })
+          .eq("id", player.id)
+          .eq("squad", APP_SQUAD);
+
+        if (error) throw error;
+        setToken(nextToken);
+      }
+
+      const link = `${window.location.origin}${window.location.pathname}?child=${nextToken}`;
+      await navigator.clipboard.writeText(link);
+      showToast("Child app link copied!");
+    } catch (e) {
+      console.error("Child link error:", e);
+      showToast("Could not create the child link. Check Supabase setup and try again.");
+    }
+
+    setBusy(false);
+  }
+
+  function shareComingSoon() {
+    showToast("Share button coming soon. Use Copy Link for now.");
   }
 
   return (
@@ -487,17 +540,16 @@ function ChildVersionComingSoon({ showToast }) {
         If they have their own phone or tablet, you can send them a child-friendly version of the app. They'll be able to complete tasks and watch their progress while everything stays synced with your dashboard.
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <button className="btn btn-green" style={{fontSize:16}} onClick={comingSoon}>
-          Copy Link
+        <button className="btn btn-green" style={{fontSize:16}} onClick={copyChildLink} disabled={busy}>
+          {busy ? "…" : "Copy Link"}
         </button>
-        <button className="btn btn-ghost" style={{fontSize:16}} onClick={comingSoon}>
+        <button className="btn btn-ghost" style={{fontSize:16}} onClick={shareComingSoon} disabled={busy}>
           Share
         </button>
       </div>
     </div>
   );
 }
-
 
 export default function App() {
   const [session, setSession]   = useState(null);
@@ -543,7 +595,7 @@ export default function App() {
       if (link?.player_id) {
         const { data: playerData } = await sb
           .from("players")
-          .select("id, name, squad")
+          .select("id, name, squad, child_access_token")
           .eq("id", link.player_id)
           .eq("squad", APP_SQUAD)
           .maybeSingle();
@@ -1262,7 +1314,7 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
       <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} showToast={showToast} />
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={onNav}>VIEW FULL 8-WEEK PLAN →</button>
 
-      <ChildVersionComingSoon showToast={showToast} />
+      <ChildVersionComingSoon player={player} showToast={showToast} />
 
       {/* Share your skills */}
       <div style={{background:"linear-gradient(135deg,#7d1018 0%,var(--g) 100%)",borderRadius:"var(--radius)",padding:"16px 18px",marginTop:12,color:"white",textAlign:"center"}}>
