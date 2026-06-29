@@ -648,13 +648,17 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (isChildView) {
+      setLoading(false);
+      return;
+    }
     sb.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
     const { data: { subscription } } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isChildView]);
 
   useEffect(() => {
     async function loadChildView() {
@@ -706,7 +710,7 @@ function App() {
       if (link?.player_id) {
         const { data: playerData } = await sb
           .from("players")
-          .select("id, name, squad")
+          .select("id, name, squad, child_access_token")
           .eq("id", link.player_id)
           .eq("squad", APP_SQUAD)
           .maybeSingle();
