@@ -589,14 +589,7 @@ export default function App() {
 
       const newChecks = { ...checks, [taskKey]: true };
       setChecks(newChecks);
-      const weekMatch2 = taskKey.match(/^w(\d+)-/);
-      if (weekMatch2) {
-        const wNum = parseInt(weekMatch2[1], 10);
-        const wData = WEEKS.find(w => w.week === wNum);
-        if (wData && weekPts(wData, newChecks) === weekMaxPts(wData)) {
-          setConfettiTrigger(t => t + 1);
-        }
-      }
+      setConfettiTrigger(t => t + 1);
       showToast(`✅ ${label} logged! +${pts} pts`);
       logAudit(session.user.email, player, "task_complete", label, null, `+${pts} pts`);
     }
@@ -1295,6 +1288,10 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
   const [expandedSquad, setExpandedSquad] = useState(false);
   const [playingVideo, setPlayingVideo]   = useState(null);
   const canToggle = !!player;
+  const squadVideos = [
+    ...((w.speed || []).map(s => ({ ytId: s.youtube_id, label: (s.label || "").replace(/^⚡\s*/, "") }))),
+    ...((w.skills || []).map(s => ({ ytId: s.youtube_id, label: (s.label || "").replace(/^[🏑⚽]\s*/, "") }))),
+  ].filter(v => v.ytId).slice(0, 3);
 
   return (
     <div>
@@ -1427,7 +1424,44 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
             </div>
             {expandedSquad && (
               <div className="squad-body">
-                <p className="squad-desc">{w.squad.desc}</p>                <div className="squad-cta">👥 Get 3–4 lads together — this is your highest scoring task!</div>
+                <p className="squad-desc">{w.squad.desc}</p>                <div className="squad-cta">👥 Get 3–4 lads together — squad sessions earn extra points! Don’t forget to send photos or short videos of your squad session to the WhatsApp group to claim the bonus.</div>
+                {squadVideos.length > 0 && (
+                  <div style={{display:"flex",gap:8,marginBottom:12}}>
+                    {squadVideos.map((v, idx) => {
+                      const vidKey = `squad-${w.week}-${idx}`;
+                      const playable = v.ytId && !String(v.ytId).startsWith("Demo");
+                      const thumbUrl = playable ? `https://img.youtube.com/vi/${v.ytId}/hqdefault.jpg` : null;
+                      return (
+                        <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",gap:4,minWidth:0}}>
+                          <div
+                            style={{position:"relative",paddingBottom:"56.25%",borderRadius:8,overflow:"hidden",background:"#000",cursor:playable?"pointer":"default"}}
+                            onClick={() => playable && setPlayingVideo(playingVideo === vidKey ? null : vidKey)}
+                          >
+                            {playingVideo === vidKey && playable ? (
+                              <iframe
+                                style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}}
+                                src={`https://www.youtube.com/embed/${v.ytId}?autoplay=1&rel=0`}
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                              />
+                            ) : thumbUrl ? (
+                              <>
+                                <img src={thumbUrl} alt="" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover"}} />
+                                <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.22)"}} />
+                                <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:28,height:28,borderRadius:"50%",background:"rgba(255,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>▶</div>
+                              </>
+                            ) : (
+                              <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4a0a0e,#1a0405)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
+                            )}
+                          </div>
+                          <div style={{fontSize:9,color:"rgba(255,255,255,0.75)",lineHeight:1.2,textAlign:"center",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis"}}>
+                            {(v.label || "Video").split(":")[0].trim()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {canToggle && (
                   <button className={`squad-mark${done?" done":""}`} onClick={()=>onToggle(k,PTS.squad,w.squad.label)}>
