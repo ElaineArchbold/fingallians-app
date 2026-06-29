@@ -470,6 +470,35 @@ function TCReacceptModal({ userEmail, onAccepted }) {
   );
 }
 
+
+function ChildVersionComingSoon({ showToast }) {
+  function comingSoon() {
+    showToast("Child version links are coming soon.");
+  }
+
+  return (
+    <div style={{background:"linear-gradient(135deg,#fff9e8 0%,#ffffff 100%)",border:"2px solid var(--gold)",borderRadius:"var(--radius)",padding:"16px 18px",marginTop:12,boxShadow:"var(--shadow)"}}>
+      <div style={{textAlign:"center",marginBottom:8}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,letterSpacing:"0.03em",fontWeight:900,color:"var(--g)"}}>
+          Want your child to have their own version?
+        </div>
+      </div>
+      <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.6,marginBottom:12,textAlign:"center"}}>
+        If they have their own phone or tablet, you can send them a child-friendly version of the app. They'll be able to complete tasks and watch their progress while everything stays synced with your dashboard.
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <button className="btn btn-green" style={{fontSize:16}} onClick={comingSoon}>
+          Copy Link
+        </button>
+        <button className="btn btn-ghost" style={{fontSize:16}} onClick={comingSoon}>
+          Share
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 export default function App() {
   const [session, setSession]   = useState(null);
   const [loading, setLoading]   = useState(true);
@@ -1233,15 +1262,18 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
       <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} showToast={showToast} />
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={onNav}>VIEW FULL 8-WEEK PLAN →</button>
 
+      <ChildVersionComingSoon showToast={showToast} />
+
       {/* Share your skills */}
       <div style={{background:"linear-gradient(135deg,#7d1018 0%,var(--g) 100%)",borderRadius:"var(--radius)",padding:"16px 18px",marginTop:12,color:"white",textAlign:"center"}}>
-        <div style={{fontSize:24,marginBottom:6}}>📱🏑⚽</div>
+      <div style={{fontSize:24,marginBottom:6}}>📱🏑⚽</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,letterSpacing:"0.02em",marginBottom:6}}>SHARE YOUR SKILLS!</div>
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
           Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
         </div>
         <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} player={player} userEmail={userEmail} />
       </div>
+
 
       <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
         <button className="link-btn" style={{color:"var(--muted)",fontSize:13}} onClick={()=>sb.auth.signOut()}>Sign out</button>
