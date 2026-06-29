@@ -471,6 +471,10 @@ function TCReacceptModal({ userEmail, onAccepted }) {
 }
 
 export default 
+
+
+
+
 function makeChildAccessToken() {
   try {
     const bytes = new Uint8Array(16);
@@ -493,6 +497,7 @@ function ChildVersionBox({ player, showToast }) {
     if (!player?.id) return;
     setBusy(true);
     let nextToken = token;
+
     try {
       if (!nextToken) {
         nextToken = makeChildAccessToken();
@@ -501,9 +506,11 @@ function ChildVersionBox({ player, showToast }) {
           .update({ child_access_token: nextToken })
           .eq("id", player.id)
           .eq("squad", APP_SQUAD);
+
         if (error) throw error;
         setToken(nextToken);
       }
+
       const link = `${window.location.origin}${window.location.pathname}?child=${nextToken}`;
       await navigator.clipboard.writeText(link);
       showToast("Child app link copied!");
@@ -511,6 +518,7 @@ function ChildVersionBox({ player, showToast }) {
       console.error("Child link error:", e);
       showToast("Could not create the child link. Check Supabase setup and try again.");
     }
+
     setBusy(false);
   }
 
@@ -518,6 +526,7 @@ function ChildVersionBox({ player, showToast }) {
     if (!player?.id) return;
     setBusy(true);
     let nextToken = token;
+
     try {
       if (!nextToken) {
         nextToken = makeChildAccessToken();
@@ -526,9 +535,11 @@ function ChildVersionBox({ player, showToast }) {
           .update({ child_access_token: nextToken })
           .eq("id", player.id)
           .eq("squad", APP_SQUAD);
+
         if (error) throw error;
         setToken(nextToken);
       }
+
       const link = `${window.location.origin}${window.location.pathname}?child=${nextToken}`;
       if (navigator.share) {
         await navigator.share({
@@ -544,6 +555,7 @@ function ChildVersionBox({ player, showToast }) {
       console.error("Child share error:", e);
       showToast("Could not share the child link. Check Supabase setup and try again.");
     }
+
     setBusy(false);
   }
 
@@ -611,6 +623,7 @@ function ChildWeeklyView({ player, checks, playerLoaded, onToggle, showToast, pt
           <div className="pts-box"><div className="num">{weeksDone}</div><div className="lbl2">Weeks Done</div></div>
         </div>
       </div>
+
       <div style={{background:"white",borderRadius:"var(--radius)",boxShadow:"var(--shadow)",padding:"14px 16px",marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <strong style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,color:"var(--g)"}}>This week</strong>
@@ -618,7 +631,9 @@ function ChildWeeklyView({ player, checks, playerLoaded, onToggle, showToast, pt
         </div>
         <div className="prog"><div style={{width:`${pct}%`,background:ps.accent}} /></div>
       </div>
+
       <WeekDetail w={w} ps={ps} pct={pct} wPts={wPts} wMax={wMax} checks={checks} onToggle={onToggle} player={player} showToast={showToast} isChildView={true} />
+
       <div style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:16,paddingBottom:18}}>
         Parent Version has WhatsApp, consent, admin and full plan access.
       </div>
@@ -665,6 +680,7 @@ function App() {
       if (!childToken) return;
       setLoading(false);
       setPlayerLoaded(false);
+
       const { data, error } = await sb
         .from("players")
         .select("id, name, squad, child_access_token")
@@ -691,8 +707,7 @@ function App() {
     }
     loadChildView();
   }, [childToken]);
-
-  useEffect(() => {
+useEffect(() => {
     if (isChildView) return;
     if (!session) { setPlayer(null); setChecks({}); setPlayerLoaded(false); return; }
     if (ADMIN_EMAILS.includes(session.user.email)) { setPlayerLoaded(true); loadAllPlayers(); return; }
@@ -743,7 +758,7 @@ function App() {
 
   async function toggleTask(taskKey, pts, label) {
     if (!player) return;
-    // Block future weeks — super admin can bypass this
+    // Block future weeks — super admin can bypass this in parent version
     const weekMatch = taskKey.match(/^w(\d+)-/);
     if (weekMatch && !isChildView && session?.user?.email !== SUPER_ADMIN_EMAIL) {
       const weekNum  = parseInt(weekMatch[1], 10);
