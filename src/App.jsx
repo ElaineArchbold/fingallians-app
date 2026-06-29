@@ -511,7 +511,7 @@ function ChildVersionBox({ player, showToast }) {
           .from("players")
           .update({ child_access_token: nextToken })
           .eq("id", player.id)
-          .eq("squad", typeof SQUAD !== "undefined" ? SQUAD : APP_SQUAD);
+          .eq("squad", APP_SQUAD);
         if (error) throw error;
         setToken(nextToken);
       }
@@ -537,7 +537,7 @@ function ChildVersionBox({ player, showToast }) {
           .from("players")
           .update({ child_access_token: nextToken })
           .eq("id", player.id)
-          .eq("squad", typeof SQUAD !== "undefined" ? SQUAD : APP_SQUAD);
+          .eq("squad", APP_SQUAD);
         if (error) throw error;
         setToken(nextToken);
       }
@@ -660,7 +660,7 @@ function App() {
         .from("players")
         .select("*")
         .eq("child_access_token", childToken)
-        .eq("squad", typeof SQUAD !== "undefined" ? SQUAD : APP_SQUAD)
+        .eq("squad", APP_SQUAD)
         .single();
 
       if (error || !data) {
@@ -692,12 +692,7 @@ const [confettiTrigger, setConfettiTrigger] = useState(0);
     const { data: { subscription } } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => subscription.unsubscribe();
   }, []);
-
   useEffect(() => {
-  if (isChildView) {
-    return <ChildWeeklyView player={player} checks={checks} playerLoaded={playerLoaded} onToggle={toggle} showToast={showToast} pts={pts} weeksDone={weeksDone} />;
-  }
-
     if (!session) { setPlayer(null); setChecks({}); setPlayerLoaded(false); return; }
     if (ADMIN_EMAILS.includes(session.user.email)) { setPlayerLoaded(true); loadAllPlayers(); return; }
     setPlayerLoaded(false);
@@ -810,6 +805,24 @@ const [confettiTrigger, setConfettiTrigger] = useState(0);
   const isSuperAdmin = session?.user?.email === SUPER_ADMIN_EMAIL;
   const pts     = totalPts(checks);
   const weeksDone = WEEKS.filter(w => weekPts(w, checks) === weekMaxPts(w)).length;
+
+  if (isChildView) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <ChildWeeklyView
+          player={player}
+          checks={checks}
+          playerLoaded={playerLoaded}
+          onToggle={toggleTask}
+          showToast={showToast}
+          pts={pts}
+          weeksDone={weeksDone}
+        />
+        {toast && <div className="toast">{toast}</div>}
+      </>
+    );
+  }
 
   if (loading) return (
     <><style>{CSS}</style>
