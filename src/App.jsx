@@ -173,6 +173,163 @@ function weekPts(w, checks) {
 function weekMaxPts(w) {
   return w.runs.length*PTS.run + w.skills.length*PTS.skill + w.speed.length*PTS.speed + PTS.squad;
 }
+
+function playerActivitySummary(checks) {
+  const summary = {
+    runsDone: 0, runsTotal: 0,
+    skillsDone: 0, skillsTotal: 0,
+    speedDone: 0, speedTotal: 0,
+    squadApproved: 0, squadPending: 0, squadReturned: 0, squadTotal: WEEKS.length,
+    approvedCount: 0, pendingCount: 0,
+  };
+
+  const weeks = WEEKS.map(w => {
+    const approved = [];
+    const pending = [];
+    const returned = [];
+
+    w.runs.forEach((r,i) => {
+      summary.runsTotal += 1;
+      const state = checks[runKey(w.week,i)];
+      if (isApproved(state)) {
+        summary.runsDone += 1;
+        summary.approvedCount += 1;
+        approved.push(`${r.label} (${r.distance})`);
+      }
+    });
+
+    w.speed.forEach(s => {
+      summary.speedTotal += 1;
+      const state = checks[speedKey(w.week,s.id)];
+      if (isApproved(state)) {
+        summary.speedDone += 1;
+        summary.approvedCount += 1;
+        approved.push((s.label || "").replace(/^⚡\s*/, ""));
+      }
+    });
+
+    w.skills.forEach(s => {
+      summary.skillsTotal += 1;
+      const state = checks[skillKey(w.week,s.id)];
+      if (isApproved(state)) {
+        summary.skillsDone += 1;
+        summary.approvedCount += 1;
+        approved.push((s.label || "").replace(/^[🏑⚽]\s*/, ""));
+      }
+    });
+
+    const squadState = checks[squadKey(w.week)];
+    if (isApproved(squadState)) {
+      summary.squadApproved += 1;
+      summary.approvedCount += 1;
+      approved.push("Squad Session");
+    } else if (isPending(squadState)) {
+      summary.squadPending += 1;
+      summary.pendingCount += 1;
+      pending.push("Squad Session awaiting approval");
+    } else if (isRejected(squadState)) {
+      summary.squadReturned += 1;
+      returned.push("Squad Session returned");
+    }
+
+    return { week: w.week, dates: w.dates, approved, pending, returned };
+  }).filter(w => w.approved.length || w.pending.length || w.returned.length);
+
+  return { weeks, summary };
+}
+
+function ProgressMiniBar({ done, total }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div style={{height:6,background:"#f0dede",borderRadius:999,overflow:"hidden",marginTop:4}}>
+      <div style={{height:"100%",width:`${pct}%`,background:"var(--g)",borderRadius:999}} />
+    </div>
+  );
+}
+
+function PlayerActivityModal({ player, checks, points, maxPossible, onClose }) {
+  const { weeks, summary } = playerActivitySummary(checks || {});
+  const pct = maxPossible ? Math.round((points / maxPossible) * 100) : 0;
+  const categories = [
+    { label:"Runs", done:summary.runsDone, total:summary.runsTotal },
+    { label:"Skills", done:summary.skillsDone, total:summary.skillsTotal },
+    { label:"Speed", done:summary.speedDone, total:summary.speedTotal },
+    { label:"Squad", done:summary.squadApproved, total:summary.squadTotal },
+  ];
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",zIndex:10030,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"white",borderRadius:18,width:"100%",maxWidth:660,maxHeight:"88vh",overflow:"hidden",boxShadow:"0 18px 60px rgba(0,0,0,0.35)"}}>
+        <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",color:"white",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:"var(--gold)",letterSpacing:"0.03em"}}>{player.name}</div>
+            <div style={{fontSize:12,opacity:0.75}}>{points} points · {pct}% complete</div>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.16)",color:"white",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,padding:"7px 10px",cursor:"pointer",fontWeight:900}}>✕</button>
+        </div>
+
+        <div style={{padding:14,overflowY:"auto",maxHeight:"calc(88vh - 78px)"}}>
+          <div style={{background:"#fdfafa",border:"1px solid #f0dede",borderRadius:14,padding:"12px 14px",marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:10}}>
+              <div style={{textAlign:"center",background:"white",borderRadius:12,padding:"10px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,color:"var(--g)",lineHeight:1}}>{points}</div>
+                <div style={{fontSize:10,color:"var(--muted)",fontWeight:900,textTransform:"uppercase",letterSpacing:"0.06em"}}>Points</div>
+              </div>
+              <div style={{textAlign:"center",background:"white",borderRadius:12,padding:"10px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,color:"var(--g)",lineHeight:1}}>{pct}%</div>
+                <div style={{fontSize:10,color:"var(--muted)",fontWeight:900,textTransform:"uppercase",letterSpacing:"0.06em"}}>Complete</div>
+              </div>
+            </div>
+
+            {categories.map(c => (
+              <div key={c.label} style={{marginBottom:9}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:900,color:"var(--dark)"}}>
+                  <span>{c.label}</span><span>{c.done}/{c.total}</span>
+                </div>
+                <ProgressMiniBar done={c.done} total={c.total} />
+              </div>
+            ))}
+
+            {(summary.squadPending > 0 || summary.squadReturned > 0) && (
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:8,lineHeight:1.5}}>
+                🟠 {summary.squadPending} awaiting approval · ↺ {summary.squadReturned} returned
+              </div>
+            )}
+          </div>
+
+          {weeks.length === 0 && (
+            <div style={{textAlign:"center",color:"var(--muted)",padding:"28px 0",fontSize:13}}>No activities completed yet.</div>
+          )}
+
+          {weeks.map(w => (
+            <div key={w.week} style={{background:"#fdfafa",border:"1px solid #f0dede",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)",fontWeight:900,letterSpacing:"0.03em",marginBottom:6}}>
+                Week {w.week} <span style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"var(--muted)",fontWeight:700}}>· {w.dates}</span>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {w.approved.map((item, idx) => (
+                  <span key={`a-${idx}`} style={{background:"white",border:"1px solid #d7ead7",borderRadius:999,padding:"5px 9px",fontSize:12,fontWeight:800,color:"var(--dark)"}}>
+                    ✅ {item}
+                  </span>
+                ))}
+                {w.pending.map((item, idx) => (
+                  <span key={`p-${idx}`} style={{background:"#fff3e0",border:"1px solid #ffd6a6",borderRadius:999,padding:"5px 9px",fontSize:12,fontWeight:800,color:"#e65100"}}>
+                    🟠 {item}
+                  </span>
+                ))}
+                {w.returned.map((item, idx) => (
+                  <span key={`r-${idx}`} style={{background:"#ffebee",border:"1px solid #ffcdd2",borderRadius:999,padding:"5px 9px",fontSize:12,fontWeight:800,color:"#c62828"}}>
+                    ↺ {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 function computeStreak(checks) {
   let streak = 0;
   for (let i = 0; i < WEEKS.length; i++) {
@@ -633,10 +790,77 @@ function ChildSimpleView({ player, checks, playerLoaded, pts, weeksDone, showToa
 }
 
 
-function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut }) {
+function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut, showToast }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const email = session?.user?.email || "";
-  const firstName = player?.name?.split(" ")[0] || email.split("@")[0] || "Account";
+  const firstName = player?.name ? `${player.name.split(" ")[0]}\'s Parent` : (email.split("@")[0] || "Account");
+
+  async function getOrCreateChildLink() {
+    if (!player?.id) {
+      showToast("Select a player first.");
+      return null;
+    }
+
+    let nextToken = player.child_access_token;
+
+    if (!nextToken) {
+      nextToken = makeChildAccessToken();
+
+      const { error } = await sb
+        .from("players")
+        .update({ child_access_token: nextToken })
+        .eq("id", player.id)
+        .eq("squad", APP_SQUAD);
+
+      if (error) throw error;
+      player.child_access_token = nextToken;
+    }
+
+    return `${window.location.origin}${window.location.pathname}?child=${nextToken}`;
+  }
+
+  async function copyChildLink() {
+    setBusy(true);
+    try {
+      const link = await getOrCreateChildLink();
+      if (!link) return;
+      await navigator.clipboard.writeText(link);
+      showToast("Child app link copied!");
+      setOpen(false);
+    } catch (e) {
+      console.error("Child link error:", e);
+      showToast("Could not create the child link. Check Supabase setup and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareChildLink() {
+    setBusy(true);
+    try {
+      const link = await getOrCreateChildLink();
+      if (!link) return;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: "Fingallians Child App",
+          text: `${player?.name || "Player"}'s child-friendly challenge view`,
+          url: link
+        });
+      } else {
+        await navigator.clipboard.writeText(link);
+        showToast("Child app link copied!");
+      }
+
+      setOpen(false);
+    } catch (e) {
+      console.error("Child share error:", e);
+      showToast("Could not share the child link. Use Copy Link instead.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div style={{position:"relative",marginLeft:"auto"}}>
@@ -654,7 +878,7 @@ function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut }) {
 
       {open && (
         <div style={{
-          position:"absolute",right:0,top:46,width:230,background:"white",borderRadius:14,
+          position:"absolute",right:0,top:46,width:240,background:"white",borderRadius:14,
           boxShadow:"0 12px 34px rgba(0,0,0,0.22)",zIndex:10050,overflow:"hidden",
           border:"1px solid #f0dede",color:"var(--dark)"
         }}>
@@ -665,6 +889,33 @@ function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut }) {
               {isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "Parent"}
             </div>
           </div>
+
+          {player && (
+            <>
+              <button
+                onClick={copyChildLink}
+                disabled={busy}
+                style={{
+                  width:"100%",border:"none",background:"white",padding:"12px 14px",
+                  textAlign:"left",fontSize:14,fontWeight:900,color:"var(--g)",cursor:"pointer",
+                  fontFamily:"inherit",borderBottom:"1px solid #f5eeee"
+                }}
+              >
+                {busy ? "…" : "📱 Copy Child App Link"}
+              </button>
+              <button
+                onClick={shareChildLink}
+                disabled={busy}
+                style={{
+                  width:"100%",border:"none",background:"white",padding:"12px 14px",
+                  textAlign:"left",fontSize:14,fontWeight:900,color:"var(--g)",cursor:"pointer",
+                  fontFamily:"inherit",borderBottom:"1px solid #f5eeee"
+                }}
+              >
+                📤 Share Child App
+              </button>
+            </>
+          )}
 
           <button
             onClick={onSignOut}
@@ -681,7 +932,6 @@ function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut }) {
     </div>
   );
 }
-
 
 export default function App() {
   const childToken = new URLSearchParams(window.location.search).get("child");
@@ -1014,7 +1264,6 @@ export default function App() {
     { id:"home",    label:"Home"     },
     { id:"plan",    label:"Plan"     },
     { id:"progress",label:"Progress" },
-    ...(isSuperAdmin ? [{ id:"admin",   label:"Admin"   }] : []),
     ...(isSuperAdmin ? [{ id:"dashboard", label:"Dashboard" }] : []),
   ];
 
@@ -1037,6 +1286,7 @@ export default function App() {
                 isAdmin={isAdmin}
                 isSuperAdmin={isSuperAdmin}
                 onSignOut={handleSignOut}
+                showToast={showToast}
               />
             </div>
             <div className="tabs">
@@ -1066,15 +1316,11 @@ export default function App() {
         )}
 
         {session && (player || isAdmin) && tab === "progress" && (
-          <ProgressTab player={player} checks={checks} isAdmin={isAdmin} />
-        )}
-
-        {session && isAdmin && tab === "admin" && (
-          <AdminTab allPlayers={allPlayers} session={session} onRefresh={loadAllPlayers} showToast={showToast} />
+          <ProgressTab player={player} checks={checks} isAdmin={isAdmin} allPlayers={allPlayers} />
         )}
 
         {session && isSuperAdmin && tab === "dashboard" && (
-          <DashboardTab allPlayers={allPlayers} />
+          <DashboardTab allPlayers={allPlayers} onRefresh={loadAllPlayers} showToast={showToast} />
         )}
       </div>
       {toast && <div className="toast">{toast}</div>}
@@ -1638,7 +1884,9 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
       <div style={{fontSize:24,marginBottom:6}}>📱🏑⚽</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,letterSpacing:"0.02em",marginBottom:6}}>SHARE YOUR SKILLS!</div>
         <div style={{fontSize:13,opacity:0.85,lineHeight:1.6,marginBottom:14}}>
-          Filmed yourself practising? Send your videos and photos to the coaches on WhatsApp — we would love to see the lads putting in the work! And don't forget — send in proof of your squad session to claim your bonus points! 📸
+          Got a video or photo of your lad putting in the work? We'd love to see it! Send it on to the coaches in the WhatsApp group.
+
+Don't forget to send proof of any Squad Sessions too, so we can award those bonus points! ⭐
         </div>
         <WAConsentButton waConsent={waConsent} setWaConsent={setWaConsent} player={player} userEmail={userEmail} />
       </div>
@@ -2010,7 +2258,91 @@ function ShareProgressButton({ player, checks }) {
   );
 }
 
-function ProgressTab({ player, checks, isAdmin }) {
+
+function AdminProgressSnapshot({ allPlayers }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const maxPossible = WEEKS.reduce((a,w)=>a+weekMaxPts(w),0);
+
+  useEffect(() => {
+    async function load() {
+      const ids = allPlayers.map(p => p.id);
+      if (!ids.length) { setRows([]); setLoading(false); return; }
+
+      const { data: comps } = await sb
+        .from("task_completions")
+        .select("player_id,task_key,status")
+        .in("player_id", ids);
+
+      const byPlayer = {};
+      ids.forEach(id => { byPlayer[id] = {}; });
+      (comps || []).forEach(r => {
+        if (byPlayer[r.player_id]) byPlayer[r.player_id][r.task_key] = r.status || "approved";
+      });
+
+      setRows(allPlayers.map(p => {
+        const c = byPlayer[p.id] || {};
+        let sessions = 0, minutes = 0, totalKm = 0;
+        WEEKS.forEach(w => {
+          w.runs.forEach((r,i) => {
+            if (isApproved(c[runKey(w.week,i)])) { sessions++; minutes += 20; totalKm += parseFloat(r.distance) || 0; }
+          });
+          w.skills.forEach(s => { if (isApproved(c[skillKey(w.week,s.id)])) { sessions++; minutes += 20; } });
+          w.speed.forEach(s => { if (isApproved(c[speedKey(w.week,s.id)])) { sessions++; minutes += 10; } });
+          if (isApproved(c[squadKey(w.week)])) { sessions++; minutes += 20; }
+        });
+        return { ...p, checks:c, sessions, minutes, pts:totalPts(c), totalKm };
+      }).sort((a,b)=>b.pts-a.pts));
+
+      setLoading(false);
+    }
+    load();
+  }, [allPlayers]);
+
+  if (loading) return <div className="loader"><div className="spinner"/>Loading player progress…</div>;
+
+  return (
+    <div className="home-wrap">
+      <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",borderRadius:"var(--radius)",padding:"16px 18px",marginBottom:14,color:"#fff",position:"relative",overflow:"hidden"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,color:"var(--gold)",letterSpacing:"0.02em"}}>Squad Progress</div>
+        <div style={{fontSize:11,opacity:0.65,marginTop:2}}>Snapshot of all players · same key numbers parents see</div>
+      </div>
+
+      {rows.map(p => {
+        const pct = maxPossible ? Math.round((p.pts / maxPossible) * 100) : 0;
+        return (
+          <div key={p.id} style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",marginBottom:10,width:"100%"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <div style={{width:34,height:34,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,flexShrink:0}}>{p.name[0]}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:900,fontSize:14,color:"var(--dark)"}}>{p.name}</div>
+                <div style={{height:4,background:"#f0dede",borderRadius:2,marginTop:5,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:"var(--g)",borderRadius:2}}/>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              {[
+                { label:"Sessions\\nLogged", value:p.sessions, suffix:"", icon:"✅", color:"var(--g)" },
+                { label:"Minutes\\nActive", value:p.minutes, suffix:" min", icon:"⏱", color:"#2e7d32" },
+                { label:"Total\\nPoints", value:p.pts, suffix:" pts", icon:"⭐", color:"#b8860b" },
+              ].map(s => (
+                <div key={s.label} style={{background:"#fdfafa",borderRadius:12,padding:"10px 6px",textAlign:"center",border:"1px solid #f0dede"}}>
+                  <div style={{fontSize:18}}>{s.icon}</div>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:s.color,lineHeight:1,marginTop:3}}>{s.value}{s.suffix}</div>
+                  <div style={{fontSize:9,color:"var(--muted)",whiteSpace:"pre-line",lineHeight:1.2,marginTop:3}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProgressTab({ player, checks, isAdmin, allPlayers = [] }) {
+  if (isAdmin) return <AdminProgressSnapshot allPlayers={allPlayers} />;
   const [completions, setCompletions] = useState([]);
   const [loading, setLoading]         = useState(true);
 
@@ -2235,6 +2567,7 @@ function CoachesTab({ allPlayers, coachEmail, showToast }) {
 function ScoresTab() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -2242,15 +2575,18 @@ function ScoresTab() {
         .from("players")
         .select("id,name,squad")
         .eq("squad", APP_SQUAD);
-      const { data: comps }   = await sb.from("task_completions").select("player_id,task_key");
+      const { data: comps }   = await sb.from("task_completions").select("player_id,task_key,status");
       if (!players) return;
       const statsMap = {};
       comps?.forEach(r => {
         if (!statsMap[r.player_id]) statsMap[r.player_id] = {};
-        statsMap[r.player_id][r.task_key] = true;
+        statsMap[r.player_id][r.task_key] = r.status || "approved";
       });
       const rows = players.map(p => ({
-        id: p.id, name: p.name, pts: totalPts(statsMap[p.id] || {}),
+        id: p.id,
+        name: p.name,
+        pts: totalPts(statsMap[p.id] || {}),
+        checks: statsMap[p.id] || {},
       })).sort((a,b) => b.pts - a.pts);
       setLeaderboard(rows);
       setLoading(false);
@@ -2261,13 +2597,30 @@ function ScoresTab() {
   const rankEmoji = (i) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}`;
   const maxPossible = WEEKS.reduce((a,w) => a + weekMaxPts(w), 0);
 
+  function completedByWeek(checks) {
+    return WEEKS.map(w => {
+      const items = [];
+      w.runs.forEach((r,i) => {
+        if (isApproved(checks[runKey(w.week,i)])) items.push(`${r.label} (${r.distance})`);
+      });
+      w.speed.forEach(s => {
+        if (isApproved(checks[speedKey(w.week,s.id)])) items.push((s.label || "").replace(/^⚡\s*/, ""));
+      });
+      w.skills.forEach(s => {
+        if (isApproved(checks[skillKey(w.week,s.id)])) items.push((s.label || "").replace(/^[🏑⚽]\s*/, ""));
+      });
+      if (isApproved(checks[squadKey(w.week)])) items.push("Squad Session");
+      return { week: w.week, dates: w.dates, items };
+    }).filter(w => w.items.length > 0);
+  }
+
   return (
     <div>
       <div style={{background:"linear-gradient(135deg,var(--g) 0%,#4a0a0e 100%)",borderRadius:"var(--radius)",padding:"22px 20px",marginBottom:14,color:"white",textAlign:"center",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",right:-10,bottom:-14,fontSize:100,opacity:0.07,pointerEvents:"none"}}>🏆</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,letterSpacing:"0.02em",color:"var(--gold)"}}>LEADERBOARD</div>
         <div style={{fontSize:12,opacity:0.75,marginTop:4}}>Fingallians 2014 Boys · Summer Challenge 2026</div>
-        <div style={{fontSize:11,opacity:0.6,marginTop:4}}>Updates live as sessions are logged</div>
+        <div style={{fontSize:11,opacity:0.6,marginTop:4}}>Updates live as sessions are logged · tap a name to view completed activities</div>
       </div>
       {loading ? (
         <div className="loader"><div className="spinner"/>Loading scores…</div>
@@ -2276,7 +2629,7 @@ function ScoresTab() {
       ) : leaderboard.map((p, i) => {
         const pct = Math.round((p.pts / maxPossible) * 100);
         return (
-          <div key={p.id} style={{display:"flex",alignItems:"center",gap:12,background:"white",border:"2px solid transparent",borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 10px rgba(163,22,33,0.08)"}}>
+          <div key={p.id} onClick={()=>setSelectedPlayer(p)} style={{display:"flex",alignItems:"center",gap:12,background:"white",border:"2px solid transparent",borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 10px rgba(163,22,33,0.08)",cursor:"pointer"}}>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,width:32,textAlign:"center",flexShrink:0}}>{rankEmoji(i)}</div>
             <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,flexShrink:0}}>{p.name[0]}</div>
             <div style={{flex:1}}>
@@ -2291,6 +2644,16 @@ function ScoresTab() {
           </div>
         );
       })}
+
+      {selectedPlayer && (
+        <PlayerActivityModal
+          player={selectedPlayer}
+          checks={selectedPlayer.checks || {}}
+          points={selectedPlayer.pts || 0}
+          maxPossible={maxPossible}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2911,16 +3274,22 @@ function ConsentLog() {
   );
 }
 
-function DashboardTab({ allPlayers }) {
+function DashboardTab({ allPlayers, onRefresh, showToast }) {
   const [stats,      setStats]      = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [recentLog,  setRecentLog]  = useState([]);
   const [claimedIds, setClaimedIds] = useState(new Set());
   const [ptsMap,     setPtsMap]     = useState({});
   const [weeklyMap,  setWeeklyMap]  = useState({});
+  const [playerChecksMap, setPlayerChecksMap] = useState({});
   const [activeView, setActiveView] = useState("overview");
   const [childListView, setChildListView] = useState(null);
   const [pendingBonus, setPendingBonus] = useState([]);
+  const [selectedLeaderboardPlayer, setSelectedLeaderboardPlayer] = useState(null);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [addingPlayer, setAddingPlayer] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removeConfirmName, setRemoveConfirmName] = useState("");
 
   useEffect(() => {
     if (!allPlayers.length) return;
@@ -2937,6 +3306,7 @@ function DashboardTab({ allPlayers }) {
       const pm = {};
       ids.forEach(id => { pm[id] = totalPts(byPlayer[id]); });
       setPtsMap(pm);
+      setPlayerChecksMap(byPlayer);
 
       const wm = {};
       ids.forEach(id => { wm[id] = {}; WEEKS.forEach(w => { wm[id][w.week] = weekPts(w, byPlayer[id]); }); });
@@ -3002,6 +3372,23 @@ function DashboardTab({ allPlayers }) {
 
   const maxPossible = WEEKS.reduce((a,w)=>a+weekMaxPts(w),0);
 
+  function dashboardCompletedByWeek(checks) {
+    return WEEKS.map(w => {
+      const items = [];
+      w.runs.forEach((r,i) => {
+        if (isApproved(checks[runKey(w.week,i)])) items.push(`${r.label} (${r.distance})`);
+      });
+      w.speed.forEach(s => {
+        if (isApproved(checks[speedKey(w.week,s.id)])) items.push((s.label || "").replace(/^⚡\s*/, ""));
+      });
+      w.skills.forEach(s => {
+        if (isApproved(checks[skillKey(w.week,s.id)])) items.push((s.label || "").replace(/^[🏑⚽]\s*/, ""));
+      });
+      if (isApproved(checks[squadKey(w.week)])) items.push("Squad Session");
+      return { week: w.week, dates: w.dates, items };
+    }).filter(w => w.items.length > 0);
+  }
+
   const formatDublin = (ts) => {
     if (!ts) return "Never";
     return new Date(ts).toLocaleString("en-IE", {
@@ -3032,6 +3419,49 @@ function DashboardTab({ allPlayers }) {
     : childListView === "active"
       ? "Child apps active this week"
       : "Generated child app links";
+
+  async function addDashboardPlayer() {
+    const name = newPlayerName.trim();
+    if (!name) return;
+    setAddingPlayer(true);
+    const { error } = await sb.from("players").insert({ name, squad: APP_SQUAD });
+    setAddingPlayer(false);
+
+    if (error) {
+      console.error("Add player failed", error);
+      showToast?.("❌ Could not add player");
+      return;
+    }
+
+    showToast?.(`✅ ${name} added`);
+    setNewPlayerName("");
+    onRefresh?.();
+  }
+
+  async function confirmRemoveDashboardPlayer() {
+    if (!removeTarget) return;
+    if (removeConfirmName.trim() !== removeTarget.name) {
+      showToast?.("Type the player's full name to confirm.");
+      return;
+    }
+
+    const { error } = await sb
+      .from("players")
+      .delete()
+      .eq("id", removeTarget.id)
+      .eq("squad", APP_SQUAD);
+
+    if (error) {
+      console.error("Remove player failed", error);
+      showToast?.("❌ Could not remove player");
+      return;
+    }
+
+    showToast?.(`🗑️ ${removeTarget.name} removed`);
+    setRemoveTarget(null);
+    setRemoveConfirmName("");
+    onRefresh?.();
+  }
 
   async function reviewBonus(row, decision) {
     const nextStatus = decision === "approved" ? "approved" : "rejected";
@@ -3176,13 +3606,13 @@ function DashboardTab({ allPlayers }) {
           </button>
         </div>
         <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",marginBottom:14}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>LEADERBOARD</div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:4}}>LEADERBOARD</div><div style={{fontSize:11,color:"var(--muted)",marginBottom:10}}>Tap a player to view completed activities</div>
           {sortedPlayers.map((p,i)=>{
             const pts = ptsMap[p.id]||0;
             const pct = Math.round((pts/maxPossible)*100);
             const medals = ["🥇","🥈","🥉"];
             return (
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:i%2===0?"#fdfafa":"white",borderRadius:10}}>
+              <div key={p.id} onClick={()=>setSelectedLeaderboardPlayer(p)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:i%2===0?"#fdfafa":"white",borderRadius:10,cursor:"pointer"}}>
                 <div style={{width:24,textAlign:"center",fontSize:i<3?18:12,flexShrink:0,color:i<3?["#f5c842","#b0b0b0","#cd7f32"][i]:"var(--muted)",fontWeight:900}}>{i<3?medals[i]:i+1}</div>
                 <div style={{width:32,height:32,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,flexShrink:0}}>{p.name[0]}</div>
                 <div style={{flex:1}}>
@@ -3199,7 +3629,35 @@ function DashboardTab({ allPlayers }) {
           })}
         </div>
 
-                {stats.total - stats.registered > 0 && (
+                <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede",marginBottom:14}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:4}}>ADD OR REMOVE PLAYER</div>
+          <div style={{fontSize:11,color:"var(--muted)",marginBottom:12}}>Add a new player, or remove a player with confirmation.</div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,marginBottom:12}}>
+            <input
+              className="inp"
+              placeholder="Player full name"
+              value={newPlayerName}
+              onChange={e=>setNewPlayerName(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&addDashboardPlayer()}
+              style={{margin:0}}
+            />
+            <button className="btn btn-green btn-sm" onClick={addDashboardPlayer} disabled={addingPlayer || !newPlayerName.trim()}>
+              {addingPlayer ? "…" : "Add"}
+            </button>
+          </div>
+
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--muted)",marginBottom:8}}>Remove Player</div>
+          {allPlayers.map(p => (
+            <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid #f8f0f0"}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:"var(--g)",color:"var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,flexShrink:0}}>{p.name[0]}</div>
+              <div style={{flex:1,fontSize:13,fontWeight:700}}>{p.name}</div>
+              <button className="btn btn-sm btn-danger" onClick={()=>{setRemoveTarget(p);setRemoveConfirmName("");}}>Remove</button>
+            </div>
+          ))}
+        </div>
+
+        {stats.total - stats.registered > 0 && (
           <div style={{background:"white",borderRadius:14,padding:"14px",border:"1px solid #f0dede"}}>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,color:"var(--dark)",letterSpacing:"0.04em",marginBottom:10}}>
               ⏳ NOT YET REGISTERED ({stats.total - stats.registered})
@@ -3240,6 +3698,38 @@ function DashboardTab({ allPlayers }) {
       )}
 
       {activeView === "consent" && <ConsentLog />}
+
+      {removeTarget && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",zIndex:10040,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"white",borderRadius:18,width:"100%",maxWidth:440,boxShadow:"0 18px 60px rgba(0,0,0,0.35)",overflow:"hidden"}}>
+            <div style={{background:"linear-gradient(135deg,#a31621,#4a0a0e)",color:"white",padding:"14px 16px"}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:"var(--gold)"}}>Confirm Remove Player</div>
+              <div style={{fontSize:12,opacity:0.78}}>This removes {removeTarget.name} from the squad list.</div>
+            </div>
+            <div style={{padding:16}}>
+              <div style={{fontSize:13,color:"var(--mid)",lineHeight:1.5,marginBottom:10}}>
+                Type the player's full name to confirm:
+                <br/><strong>{removeTarget.name}</strong>
+              </div>
+              <input className="inp" value={removeConfirmName} onChange={e=>setRemoveConfirmName(e.target.value)} placeholder={removeTarget.name} />
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{setRemoveTarget(null);setRemoveConfirmName("");}}>Cancel</button>
+                <button className="btn btn-danger btn-sm" onClick={confirmRemoveDashboardPlayer} disabled={removeConfirmName.trim() !== removeTarget.name}>Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedLeaderboardPlayer && (
+        <PlayerActivityModal
+          player={selectedLeaderboardPlayer}
+          checks={playerChecksMap[selectedLeaderboardPlayer.id] || {}}
+          points={ptsMap[selectedLeaderboardPlayer.id] || 0}
+          maxPossible={maxPossible}
+          onClose={() => setSelectedLeaderboardPlayer(null)}
+        />
+      )}
 
       {childListView && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",zIndex:10020,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
