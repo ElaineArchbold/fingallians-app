@@ -12,6 +12,7 @@ const SUPER_ADMIN_EMAIL = "e.t.archbold@gmail.com";
 const FORMSPREE_URL     = "https://formspree.io/f/mrewqpqo";
 const WHATSAPP_LINK     = "https://chat.whatsapp.com/F3A0lBj6293JQD2oghSoAx";
 const APP_SQUAD         = "2014 Boys";
+const CURRENT_TERMS_VERSION = "v2"; // Only change this when the actual Terms & Conditions change.
 const CONSENT_START_DATE = "2026-06-26T00:00:00.000Z";
 
 // Admin accounts that should be auto-linked to a player by name
@@ -145,23 +146,27 @@ const squadKey = (week)     => `w${week}-squad`;
 
 const PTS = { run:3, skill:2, speed:2, squad:4 };
 
+const isApproved = (v) => v === true || v === "approved";
+const isPending  = (v) => v === "pending";
+const isRejected = (v) => v === "rejected";
+
 function totalPts(checks) {
   let p = 0;
   WEEKS.forEach(w => {
-    w.runs.forEach((_,i)  => { if(checks[runKey(w.week,i)])   p+=PTS.run; });
-    w.skills.forEach(s    => { if(checks[skillKey(w.week,s.id)]) p+=PTS.skill; });
-    w.speed.forEach(s     => { if(checks[speedKey(w.week,s.id)]) p+=PTS.speed; });
-    if(checks[squadKey(w.week)]) p+=PTS.squad;
+    w.runs.forEach((_,i)  => { if(isApproved(checks[runKey(w.week,i)]))   p+=PTS.run; });
+    w.skills.forEach(s    => { if(isApproved(checks[skillKey(w.week,s.id)])) p+=PTS.skill; });
+    w.speed.forEach(s     => { if(isApproved(checks[speedKey(w.week,s.id)])) p+=PTS.speed; });
+    if(isApproved(checks[squadKey(w.week)])) p+=PTS.squad;
   });
   return p;
 }
 
 function weekPts(w, checks) {
   let p = 0;
-  w.runs.forEach((_,i) => { if(checks[runKey(w.week,i)]) p+=PTS.run; });
-  w.skills.forEach(s   => { if(checks[skillKey(w.week,s.id)]) p+=PTS.skill; });
-  w.speed.forEach(s    => { if(checks[speedKey(w.week,s.id)]) p+=PTS.speed; });
-  if(checks[squadKey(w.week)]) p+=PTS.squad;
+  w.runs.forEach((_,i) => { if(isApproved(checks[runKey(w.week,i)])) p+=PTS.run; });
+  w.skills.forEach(s   => { if(isApproved(checks[skillKey(w.week,s.id)])) p+=PTS.skill; });
+  w.speed.forEach(s    => { if(isApproved(checks[speedKey(w.week,s.id)])) p+=PTS.speed; });
+  if(isApproved(checks[squadKey(w.week)])) p+=PTS.squad;
   return p;
 }
 
@@ -393,17 +398,17 @@ function TCReacceptModal({ userEmail, onAccepted }) {
   async function handleAccept() {
     if (!ticked) return;
     setSaving(true);
-    try { localStorage.setItem(`tcVersion:${APP_SQUAD}`, "v2"); } catch(e) {}
+    try { localStorage.setItem(`tcVersion:${APP_SQUAD}`, CURRENT_TERMS_VERSION); } catch(e) {}
     try {
       await sb.from("audit_log").insert({
         user_email: userEmail,
         player_id: null,
         player_name: null,
         action: "tc_agreed_at_signup",
-        detail: "User agreed to updated Terms & Conditions (v2 — includes WhatsApp, photography, coaching group disclaimer)",
+        detail: `User agreed to Terms & Conditions (${CURRENT_TERMS_VERSION})`,
         squad: APP_SQUAD,
         old_value: null,
-        new_value: new Date().toISOString(),
+        new_value: CURRENT_TERMS_VERSION,
       });
     } catch(e) {}
     setSaving(false);
@@ -420,10 +425,10 @@ function TCReacceptModal({ userEmail, onAccepted }) {
           <div style={{fontSize:36,marginBottom:8}}>📋</div>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,
                        color:"var(--g)",letterSpacing:"0.02em",marginBottom:4}}>
-            UPDATED TERMS & CONDITIONS
+            TERMS & CONDITIONS
           </div>
           <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>
-            We've updated our terms before the challenge kicks off. Please read and agree to continue.
+            Please read and agree once to continue. You will only be asked again if these terms materially change.
           </p>
         </div>
 
@@ -628,6 +633,56 @@ function ChildSimpleView({ player, checks, playerLoaded, pts, weeksDone, showToa
 }
 
 
+function ProfileMenu({ session, player, isAdmin, isSuperAdmin, onSignOut }) {
+  const [open, setOpen] = useState(false);
+  const email = session?.user?.email || "";
+  const firstName = player?.name?.split(" ")[0] || email.split("@")[0] || "Account";
+
+  return (
+    <div style={{position:"relative",marginLeft:"auto"}}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-label="Open account menu"
+        style={{
+          width:38,height:38,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.28)",
+          background:"rgba(255,255,255,0.12)",color:"#fff",display:"flex",alignItems:"center",
+          justifyContent:"center",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.18)"
+        }}
+      >
+        👤
+      </button>
+
+      {open && (
+        <div style={{
+          position:"absolute",right:0,top:46,width:230,background:"white",borderRadius:14,
+          boxShadow:"0 12px 34px rgba(0,0,0,0.22)",zIndex:10050,overflow:"hidden",
+          border:"1px solid #f0dede",color:"var(--dark)"
+        }}>
+          <div style={{padding:"13px 14px",background:"#faf7f7",borderBottom:"1px solid #f0dede"}}>
+            <div style={{fontWeight:900,fontSize:14}}>{firstName}</div>
+            <div style={{fontSize:11,color:"var(--muted)",wordBreak:"break-word",marginTop:2}}>{email}</div>
+            <div style={{fontSize:11,color:"var(--g)",fontWeight:800,marginTop:4}}>
+              {isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "Parent"}
+            </div>
+          </div>
+
+          <button
+            onClick={onSignOut}
+            style={{
+              width:"100%",border:"none",background:"white",padding:"13px 14px",
+              textAlign:"left",fontSize:14,fontWeight:900,color:"#a31621",cursor:"pointer",
+              fontFamily:"inherit"
+            }}
+          >
+            🚪 Sign Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function App() {
   const childToken = new URLSearchParams(window.location.search).get("child");
   const isChildView = !!childToken;
@@ -641,12 +696,18 @@ export default function App() {
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [waConsent, setWaConsent] = useState(() => { try { return localStorage.getItem(`waConsent:${APP_SQUAD}`) === "true"; } catch { return false; } });
-  const [tcAccepted, setTcAccepted] = useState(() => { try { return localStorage.getItem(`tcVersion:${APP_SQUAD}`) === "v2"; } catch { return false; } });
+  const [tcAccepted, setTcAccepted] = useState(() => { try { return localStorage.getItem(`tcVersion:${APP_SQUAD}`) === CURRENT_TERMS_VERSION; } catch { return false; } });
 
   const showToast = useCallback((msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2800);
   }, []);
+
+  async function handleSignOut() {
+    try { await sb.auth.signOut(); } catch (_) {}
+    try { sessionStorage.clear(); } catch (_) {}
+    window.location.href = window.location.pathname;
+  }
 
   useEffect(() => {
     if (isChildView) {
@@ -660,6 +721,32 @@ export default function App() {
     const { data: { subscription } } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => subscription.unsubscribe();
   }, [isChildView]);
+
+  useEffect(() => {
+    async function checkTermsAccepted() {
+      if (!session?.user?.email || isChildView || tcAccepted) return;
+
+      try {
+        const { data } = await sb
+          .from("audit_log")
+          .select("id")
+          .eq("user_email", session.user.email)
+          .eq("squad", APP_SQUAD)
+          .eq("action", "tc_agreed_at_signup")
+          .or(`new_value.eq.${CURRENT_TERMS_VERSION},detail.ilike.%${CURRENT_TERMS_VERSION}%`)
+          .limit(1);
+
+        if ((data || []).length > 0) {
+          try { localStorage.setItem(`tcVersion:${APP_SQUAD}`, CURRENT_TERMS_VERSION); } catch (_) {}
+          setTcAccepted(true);
+        }
+      } catch (e) {
+        // If the audit lookup fails, fall back to the local-device check.
+      }
+    }
+
+    checkTermsAccepted();
+  }, [session?.user?.email, isChildView, tcAccepted]);
 
   useEffect(() => {
     async function loadChildView() {
@@ -683,13 +770,27 @@ export default function App() {
 
       setPlayer(data);
 
+      // Record child app usage. This is deliberately separate from task completion.
+      // It lets the admin dashboard count Generated / Opened / Active this week later.
+      try {
+        const { error: openError } = await sb.rpc("child_record_open", {
+          p_child_access_token: childToken,
+          p_squad: APP_SQUAD
+        });
+        if (openError) console.error("Child open tracking failed", openError);
+      } catch (e) {
+        console.error("Child open tracking failed", e);
+      }
+
       const { data: comps } = await sb
         .from("task_completions")
-        .select("task_key")
+        .select("task_key,status")
         .eq("player_id", data.id);
 
       const c = {};
-      [...new Set((comps || []).map(r => r.task_key))].forEach(k => { c[k] = true; });
+      (comps || []).forEach(r => {
+        c[r.task_key] = r.status || "approved";
+      });
       setChecks(c);
       setPlayerLoaded(true);
     }
@@ -724,11 +825,13 @@ export default function App() {
           setPlayer(playerData);
           const { data: comps } = await sb
             .from("task_completions")
-            .select("task_key")
+            .select("task_key,status")
             .eq("player_id", playerData.id);
           const c = {};
           // One child = one activity state, even if multiple parent emails are linked.
-          [...new Set((comps || []).map(r => r.task_key))].forEach(k => { c[k] = true; });
+          (comps || []).forEach(r => {
+            c[r.task_key] = r.status || "approved";
+          });
           setChecks(c);
         }
       }
@@ -741,7 +844,7 @@ export default function App() {
   async function loadAllPlayers() {
     const { data } = await sb
       .from("players")
-      .select("id,name,squad")
+      .select("id,name,squad,child_access_token,child_first_opened_at,child_last_seen_at")
       .eq("squad", APP_SQUAD)
       .order("name");
     setAllPlayers(data || []);
@@ -749,6 +852,8 @@ export default function App() {
 
   async function toggleTask(taskKey, pts, label) {
     if (!player) return;
+
+    const isSquadSession = /^w\d+-squad$/.test(taskKey);
 
     const weekMatch = taskKey.match(/^w(\d+)-/);
     if (weekMatch && !isChildView && session?.user?.email !== SUPER_ADMIN_EMAIL) {
@@ -762,10 +867,38 @@ export default function App() {
       }
     }
 
-    const done = checks[taskKey];
-    const nextComplete = !done;
+    const currentState = checks[taskKey];
+    const done = isApproved(currentState) || isPending(currentState);
+    const returned = isRejected(currentState);
+    const nextComplete = returned ? true : !done;
 
     if (isChildView) {
+      if (isSquadSession) {
+        const { error } = await sb.rpc("child_submit_task_completion", {
+          p_child_access_token: childToken,
+          p_task_key: taskKey,
+          p_complete: nextComplete,
+          p_status: nextComplete ? "pending" : "rejected"
+        });
+
+        if (error) {
+          console.error("Child squad submission failed", error);
+          showToast("❌ Could not submit that squad session — please try again.");
+          return;
+        }
+
+        if (nextComplete) {
+          setChecks(c => ({ ...c, [taskKey]: "pending" }));
+          showToast("🏅 Squad Session submitted! Ask a parent to share proof in WhatsApp. Points appear once approved.");
+          logAudit("Child Version", player, "bonus_pending", `${label} submitted for approval from child app`, null, "pending");
+        } else {
+          setChecks(c => { const n={...c}; delete n[taskKey]; return n; });
+          showToast("↩️ Squad Session submission removed");
+          logAudit("Child Version", player, "bonus_removed", `${label} pending submission removed from child app`);
+        }
+        return;
+      }
+
       const { error } = await sb.rpc("child_set_task_completion", {
         p_child_access_token: childToken,
         p_task_key: taskKey,
@@ -779,7 +912,7 @@ export default function App() {
       }
 
       if (nextComplete) {
-        setChecks(c => ({ ...c, [taskKey]: true }));
+        setChecks(c => ({ ...c, [taskKey]: "approved" }));
         setConfettiTrigger(t => t + 1);
         showToast(`✅ ${label} logged! +${pts} pts`);
       } else {
@@ -799,24 +932,24 @@ export default function App() {
     }
 
     if (done) {
-      // Remove the child's completion for this task. Any linked parent can unmark it.
       await sb.from("task_completions")
         .delete()
         .eq("player_id", player.id)
         .eq("task_key", taskKey);
       setChecks(c => { const n={...c}; delete n[taskKey]; return n; });
-      logAudit(session.user.email, player, "task_incomplete", label);
+      logAudit(session.user.email, player, isSquadSession ? "bonus_removed" : "task_incomplete", label);
     } else {
-      // Keep one completion per child/task, even if multiple parent emails are linked.
       await sb.from("task_completions")
         .delete()
         .eq("player_id", player.id)
         .eq("task_key", taskKey);
 
+      const nextStatus = isSquadSession ? "pending" : "approved";
       const { error: insertError } = await sb.from("task_completions").insert({
         player_id: player.id,
         task_key: taskKey,
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        status: nextStatus
       });
 
       if (insertError) {
@@ -825,11 +958,16 @@ export default function App() {
         return;
       }
 
-      const newChecks = { ...checks, [taskKey]: true };
-      setChecks(newChecks);
-      setConfettiTrigger(t => t + 1);
-      showToast(`✅ ${label} logged! +${pts} pts`);
-      logAudit(session.user.email, player, "task_complete", label, null, `+${pts} pts`);
+      setChecks(c => ({ ...c, [taskKey]: nextStatus }));
+
+      if (isSquadSession) {
+        showToast("🏅 Squad Session submitted! Ask a parent to share proof in WhatsApp. Points appear once approved.");
+        logAudit(session.user.email, player, "bonus_pending", `${label} submitted for approval`, null, "pending");
+      } else {
+        setConfettiTrigger(t => t + 1);
+        showToast(`✅ ${label} logged! +${pts} pts`);
+        logAudit(session.user.email, player, "task_complete", label, null, `+${pts} pts`);
+      }
     }
   }
   async function linkPlayer(playerId) {
@@ -888,11 +1026,18 @@ export default function App() {
           <div className="hdr">
             <div className="hdr-row">
               <div className="crest"><img src={LOGO} alt="Fingallians GAA crest" /></div>
-              <div>
+              <div style={{minWidth:0}}>
                 <div className="hdr-title">FINGALLIANS GAA</div>
                 <div className="hdr-sub">Fingallians 2014 Boys · Summer Challenge 2026</div>
                 {player && <div className="hdr-player">👤 {player.name} · {pts} pts</div>}
               </div>
+              <ProfileMenu
+                session={session}
+                player={player}
+                isAdmin={isAdmin}
+                isSuperAdmin={isSuperAdmin}
+                onSignOut={handleSignOut}
+              />
             </div>
             <div className="tabs">
               {TABS.map(t => (
@@ -1183,9 +1328,6 @@ function LinkPlayerScreen({ onLink }) {
             )
           )}
         </div>
-      </div>
-      <div style={{textAlign:"center",marginTop:8}}>
-        <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
       </div>
     </div>
   );
@@ -1502,9 +1644,6 @@ function HomeTab({ player, checks, pts, weeksDone, onNav, onToggle, showToast, w
       </div>
 
 
-      <div style={{textAlign:"center",marginTop:14,paddingBottom:8}}>
-        <button className="link-btn" style={{color:"var(--muted)",fontSize:13}} onClick={()=>sb.auth.signOut()}>Sign out</button>
-      </div>
     </div>
   );
 }
@@ -1563,7 +1702,7 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
           <div className="runs-chips">
             {w.runs.map((r,i) => {
               const k = runKey(w.week, i);
-              const done = !!checks[k];
+              const done = isApproved(checks[k]);
               return (
                 <div key={i} className={`run-chip${done?" done":""}`}
                   style={!done?{background:ps.chip,color:ps.accent,borderColor:"transparent"}:{}}
@@ -1584,7 +1723,7 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
       {/* ── Speed Mechanics ── */}
       {w.speed.map((s) => {
         const k    = speedKey(w.week, s.id);
-        const done = !!checks[k];
+        const done = isApproved(checks[k]);
         const open = expandedSkill === s.id;
         return (
           <div key={s.id} className="skill-card" style={{borderLeft:"4px solid #7b1fa2"}}>
@@ -1624,7 +1763,7 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
       {/* ── Hurling & Football Skills ── */}
       {w.skills.map((s) => {
         const k    = skillKey(w.week, s.id);
-        const done = !!checks[k];
+        const done = isApproved(checks[k]);
         const open = expandedSkill === s.id;
         return (
           <div key={s.id} className="skill-card">
@@ -1661,29 +1800,39 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
 
       {(() => {
         const k    = squadKey(w.week);
-        const done = !!checks[k];
+        const state = checks[k];
+        const done = isApproved(state);
+        const pending = isPending(state);
+        const returned = isRejected(state);
         return (
           <div className="squad-card">
             <div className="squad-hd" onClick={()=>{
-              if(expandedSquad && !done) showToast("💪 Don't forget to tap 'Squad Session Done' if you have completed this!");
+              if(expandedSquad && !done && !pending && !returned) showToast("💪 Don't forget to submit your Squad Session if you completed this!");
               setExpandedSquad(v=>!v);
             }}>
-              <div className={`skill-check${done?" done":""}`} style={{flexShrink:0,cursor:"pointer"}}
+              <div className={`skill-check${done?" done":""}`} style={{flexShrink:0,cursor:"pointer",borderColor:pending?"#f5a623":returned?"#e65100":undefined,background:pending?"#fff3e0":returned?"#ffebee":undefined,color:pending?"#e65100":returned?"#c62828":undefined}}
                 onClick={e=>{e.stopPropagation();
-                  if(expandedSquad && !done) showToast("💪 Don't forget to tap 'Squad Session Done' if you have completed this!");
+                  if(expandedSquad && !done && !pending && !returned) showToast("💪 Don't forget to submit your Squad Session if you completed this!");
                   setExpandedSquad(v=>!v);
-                }}>{done?"✓":""}</div>
+                }}>{done?"✓":pending?"…":returned?"↺":""}</div>
               <div className="squad-icon">👥</div>
               <div className="squad-hd-text">
-                <div className="squad-type">Squad Session · +{PTS.squad} pts</div>
+                <div className="squad-type">
+                  Squad Session · +{PTS.squad} pts {pending ? "· Awaiting approval" : returned ? "· Returned" : ""}
+                </div>
                 <div className="squad-name">{w.squad.label}</div>
               </div>
-              <div className="squad-pts">+{PTS.squad}</div>
+              <div className="squad-pts">{pending ? "Pending" : returned ? "Returned" : `+${PTS.squad}`}</div>
               <div style={{fontSize:18,color:"rgba(255,255,255,0.5)",transition:"transform 0.2s",transform:expandedSquad?"rotate(180deg)":"none"}}>⌄</div>
             </div>
             {expandedSquad && (
               <div className="squad-body">
-                <p className="squad-desc">{w.squad.desc}</p>                <div className="squad-cta">👥 Get 3–4 lads together — squad sessions earn extra points! Don’t forget to send photos or short videos of your squad session to the WhatsApp group to claim the bonus.</div>
+                <p className="squad-desc">{w.squad.desc}</p>                <div className="squad-cta">🏅 Completed your Squad Session? Ask a parent to send photo or video proof in WhatsApp. Points appear once approved.</div>
+                {returned && (
+                  <div style={{background:"#ffebee",border:"1px solid #ffcdd2",color:"#c62828",borderRadius:10,padding:"10px 12px",fontSize:13,fontWeight:800,marginBottom:12}}>
+                    ↺ Returned by admin — please check WhatsApp/proof and submit again.
+                  </div>
+                )}
                 {squadVideos.length > 0 && (
                   <div style={{display:"flex",gap:8,marginBottom:12}}>
                     {squadVideos.map((v, idx) => {
@@ -1724,7 +1873,7 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
 
                 {canToggle && (
                   <button className={`squad-mark${done?" done":""}`} onClick={()=>onToggle(k,PTS.squad,w.squad.label)}>
-                    {done?"✕ MARK INCOMPLETE":"✓ SQUAD SESSION DONE"}
+                    {pending ? "AWAITING APPROVAL" : returned ? "↺ SUBMIT AGAIN" : done ? "✕ REMOVE" : "✓ SUBMIT FOR APPROVAL"}
                   </button>
                 )}
               </div>
@@ -2770,19 +2919,21 @@ function DashboardTab({ allPlayers }) {
   const [ptsMap,     setPtsMap]     = useState({});
   const [weeklyMap,  setWeeklyMap]  = useState({});
   const [activeView, setActiveView] = useState("overview");
+  const [childListView, setChildListView] = useState(null);
+  const [pendingBonus, setPendingBonus] = useState([]);
 
   useEffect(() => {
     if (!allPlayers.length) return;
     const ids = allPlayers.map(p => p.id);
     Promise.all([
-      sb.from("task_completions").select("player_id,task_key,completed_at").in("player_id", ids),
+      sb.from("task_completions").select("player_id,task_key,completed_at,status").in("player_id", ids),
       sb.from("parent_players").select("player_id").in("player_id", ids),
       sb.from("audit_log").select("user_email,player_name,action,detail,created_at,squad").or(`squad.eq.${APP_SQUAD},squad.is.null`).order("created_at",{ascending:false}).limit(100),
       sb.from("fitness_tests").select("player_id,period,lap_time").in("player_id", ids),
     ]).then(([{data:comps},{data:links},{data:logs},{data:fitness}]) => {
       const byPlayer = {};
       ids.forEach(id => { byPlayer[id] = {}; });
-      comps?.forEach(r => { if(byPlayer[r.player_id]) byPlayer[r.player_id][r.task_key]=true; });
+      comps?.forEach(r => { if(byPlayer[r.player_id]) byPlayer[r.player_id][r.task_key]=r.status || "approved"; });
       const pm = {};
       ids.forEach(id => { pm[id] = totalPts(byPlayer[id]); });
       setPtsMap(pm);
@@ -2790,6 +2941,17 @@ function DashboardTab({ allPlayers }) {
       const wm = {};
       ids.forEach(id => { wm[id] = {}; WEEKS.forEach(w => { wm[id][w.week] = weekPts(w, byPlayer[id]); }); });
       setWeeklyMap(wm);
+
+      const playersById = {};
+      allPlayers.forEach(p => { playersById[p.id] = p; });
+      setPendingBonus((comps || [])
+        .filter(r => r.status === "pending" && /^w\d+-squad$/.test(r.task_key))
+        .map(r => ({
+          ...r,
+          player_name: playersById[r.player_id]?.name || "Unknown player",
+          week: (r.task_key.match(/^w(\d+)-/) || [null, "?"])[1]
+        }))
+        .sort((a,b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0)));
 
       const registeredIds = new Set((links || []).map(l => l.player_id).filter(id => ids.includes(id)));
       setClaimedIds(registeredIds);
@@ -2803,8 +2965,13 @@ function DashboardTab({ allPlayers }) {
       const preTimes  = fitness?.filter(f=>f.period==="pre"  && f.lap_time).length || 0;
       const postTimes = fitness?.filter(f=>f.period==="post" && f.lap_time).length || 0;
 
+      const childGenerated = allPlayers.filter(p => !!p.child_access_token).length;
+      const childOpened = allPlayers.filter(p => !!p.child_first_opened_at).length;
+      const childActiveWeek = allPlayers.filter(p => p.child_last_seen_at && new Date(p.child_last_seen_at) > weekAgo).length;
+
       setStats({ totalSessions, playersActive, avgPts, thisWeekSessions, preTimes, postTimes,
-                 registered: registeredIds.size, total: ids.length });
+                 registered: registeredIds.size, total: ids.length,
+                 childGenerated, childOpened, childActiveWeek });
       setLoading(false);
     });
   }, [allPlayers]);
@@ -2834,6 +3001,77 @@ function DashboardTab({ allPlayers }) {
   };
 
   const maxPossible = WEEKS.reduce((a,w)=>a+weekMaxPts(w),0);
+
+  const formatDublin = (ts) => {
+    if (!ts) return "Never";
+    return new Date(ts).toLocaleString("en-IE", {
+      timeZone: "Europe/Dublin",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const childRows = useMemo(() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return allPlayers
+      .filter(p => p.child_access_token)
+      .filter(p => {
+        if (childListView === "opened") return !!p.child_first_opened_at;
+        if (childListView === "active") return p.child_last_seen_at && new Date(p.child_last_seen_at) > weekAgo;
+        return true;
+      })
+      .sort((a,b) => new Date(b.child_last_seen_at || b.child_first_opened_at || 0) - new Date(a.child_last_seen_at || a.child_first_opened_at || 0));
+  }, [allPlayers, childListView]);
+
+  const childListTitle = childListView === "opened"
+    ? "Child apps opened"
+    : childListView === "active"
+      ? "Child apps active this week"
+      : "Generated child app links";
+
+  async function reviewBonus(row, decision) {
+    const nextStatus = decision === "approved" ? "approved" : "rejected";
+    const { error } = await sb
+      .from("task_completions")
+      .update({
+        status: nextStatus,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: SUPER_ADMIN_EMAIL
+      })
+      .eq("player_id", row.player_id)
+      .eq("task_key", row.task_key)
+      .eq("status", "pending");
+
+    if (error) {
+      console.error("Bonus review failed", error);
+      alert("Could not update bonus request. Please try again.");
+      return;
+    }
+
+    const player = allPlayers.find(p => p.id === row.player_id);
+    await logAudit(
+      SUPER_ADMIN_EMAIL,
+      player,
+      decision === "approved" ? "bonus_approved" : "bonus_returned",
+      `Week ${row.week} Squad Session ${decision === "approved" ? "approved" : "returned"}`,
+      "pending",
+      nextStatus
+    );
+
+    setPendingBonus(list => list.filter(x => !(x.player_id === row.player_id && x.task_key === row.task_key)));
+
+    if (decision === "approved") {
+      setPtsMap(pm => ({ ...pm, [row.player_id]: (pm[row.player_id] || 0) + PTS.squad }));
+    }
+
+    alert(decision === "approved"
+      ? `+${PTS.squad} points awarded to ${row.player_name}`
+      : `${row.player_name}'s Squad Session was returned`);
+  }
 
   if (loading) return (
     <div className="admin-wrap">
@@ -2870,6 +3108,60 @@ function DashboardTab({ allPlayers }) {
               <div style={{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>{s.label}</div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,color:s.color,lineHeight:1}}>{s.value}</div>
               <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{background:"linear-gradient(135deg,#e8f5e9,#ffffff)",border:"1px solid #c8e6c9",borderRadius:14,padding:"14px",marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"var(--g)",letterSpacing:"0.04em",fontWeight:900}}>CHILD APPS</div>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Private admin-only usage summary</div>
+            </div>
+            <div style={{fontSize:26}}>👧</div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+            {[
+              {label:"Generated",value:stats.childGenerated,sub:"links created",view:"generated"},
+              {label:"Opened",value:stats.childOpened,sub:"ever opened",view:"opened"},
+              {label:"Active 7d",value:stats.childActiveWeek,sub:"opened this week",view:"active"},
+            ].map(s=>(
+              <button key={s.label} onClick={()=>setChildListView(s.view)} style={{background:"white",borderRadius:12,padding:"10px 8px",textAlign:"center",border:"1px solid #e1f0e1",cursor:"pointer",fontFamily:"inherit"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,color:"#2e7d32",lineHeight:1}}>{s.value}</div>
+                <div style={{fontSize:10,color:"#2e7d32",fontWeight:900,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:4}}>{s.label}</div>
+                <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{s.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:"linear-gradient(135deg,#fff8e1,#ffffff)",border:"1px solid #ffe0a3",borderRadius:14,padding:"14px",marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,color:"#b8860b",letterSpacing:"0.04em",fontWeight:900}}>BONUS POINTS TO APPROVE</div>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>
+                {pendingBonus.length} waiting · approve once proof is posted in WhatsApp
+              </div>
+            </div>
+            <div style={{fontSize:26}}>🏅</div>
+          </div>
+
+          {pendingBonus.length === 0 && (
+            <div style={{background:"white",borderRadius:12,padding:"12px",textAlign:"center",fontSize:13,color:"var(--muted)",border:"1px solid #fff0c2"}}>
+              No bonus requests waiting.
+            </div>
+          )}
+
+          {pendingBonus.length > 0 && pendingBonus.map(row => (
+            <div key={`${row.player_id}-${row.task_key}`} style={{background:"white",borderRadius:12,padding:"11px 12px",marginBottom:8,border:"1px solid #fff0c2",display:"grid",gridTemplateColumns:"1fr auto",gap:10,alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:900,color:"var(--dark)"}}>{row.player_name}</div>
+                <div style={{fontSize:12,color:"var(--mid)",marginTop:2}}>Week {row.week} Squad Session · submitted {formatDublin(row.completed_at)}</div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>reviewBonus(row,"approved")} style={{background:"#2e7d32",color:"white",border:"none",borderRadius:10,padding:"8px 10px",fontWeight:900,cursor:"pointer",fontSize:12}}>Approve</button>
+                <button onClick={()=>reviewBonus(row,"returned")} style={{background:"#fff3e0",color:"#e65100",border:"1px solid #ffd6a6",borderRadius:10,padding:"8px 10px",fontWeight:900,cursor:"pointer",fontSize:12}}>Return</button>
+              </div>
             </div>
           ))}
         </div>
@@ -2948,6 +3240,61 @@ function DashboardTab({ allPlayers }) {
       )}
 
       {activeView === "consent" && <ConsentLog />}
+
+      {childListView && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",zIndex:10020,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"white",borderRadius:18,width:"100%",maxWidth:720,maxHeight:"88vh",overflow:"hidden",boxShadow:"0 18px 60px rgba(0,0,0,0.35)"}}>
+            <div style={{background:"linear-gradient(135deg,var(--g),#4a0a0e)",color:"white",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:"var(--gold)",letterSpacing:"0.03em"}}>{childListTitle}</div>
+                <div style={{fontSize:12,opacity:0.75}}>{childRows.length} player{childRows.length===1?"":"s"} · times shown in Dublin time</div>
+              </div>
+              <button onClick={()=>setChildListView(null)} style={{background:"rgba(255,255,255,0.16)",color:"white",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,padding:"7px 10px",cursor:"pointer",fontWeight:900}}>✕</button>
+            </div>
+
+            <div style={{padding:14,overflowY:"auto",maxHeight:"calc(88vh - 78px)"}}>
+              {childRows.length === 0 && (
+                <div style={{textAlign:"center",color:"var(--muted)",padding:"28px 0",fontSize:13}}>No matching child app records yet.</div>
+              )}
+
+              {childRows.length > 0 && (
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:"#fafafa",borderBottom:"1px solid #eee"}}>
+                        <th style={{textAlign:"left",padding:"9px 8px",color:"var(--muted)"}}>Player</th>
+                        <th style={{textAlign:"left",padding:"9px 8px",color:"var(--muted)"}}>Opened?</th>
+                        <th style={{textAlign:"left",padding:"9px 8px",color:"var(--muted)"}}>First opened</th>
+                        <th style={{textAlign:"left",padding:"9px 8px",color:"var(--muted)"}}>Last opened</th>
+                        <th style={{textAlign:"right",padding:"9px 8px",color:"var(--muted)"}}>Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {childRows.map((p,i) => {
+                        const opened = !!p.child_first_opened_at;
+                        const pts = ptsMap[p.id] || 0;
+                        return (
+                          <tr key={p.id} style={{borderBottom:i<childRows.length-1?"1px solid #f4eeee":"none"}}>
+                            <td style={{padding:"9px 8px",fontWeight:800,color:"var(--dark)"}}>{p.name}</td>
+                            <td style={{padding:"9px 8px"}}>
+                              <span style={{display:"inline-block",padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:900,color:opened?"#2e7d32":"#e65100",background:opened?"#e8f5e9":"#fff3e0"}}>
+                                {opened ? "Opened" : "Never"}
+                              </span>
+                            </td>
+                            <td style={{padding:"9px 8px",color:"var(--mid)",whiteSpace:"nowrap"}}>{formatDublin(p.child_first_opened_at)}</td>
+                            <td style={{padding:"9px 8px",color:"var(--mid)",whiteSpace:"nowrap"}}>{formatDublin(p.child_last_seen_at)}</td>
+                            <td style={{padding:"9px 8px",textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,color:"var(--g)"}}>{pts}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2961,11 +3308,11 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
 
   useEffect(() => {
     async function load() {
-      const { data: comps } = await sb.from("task_completions").select("player_id,task_key");
+      const { data: comps } = await sb.from("task_completions").select("player_id,task_key,status");
       const stats = {};
       comps?.forEach(r => {
         if (!stats[r.player_id]) stats[r.player_id] = {};
-        stats[r.player_id][r.task_key] = true;
+        stats[r.player_id][r.task_key] = r.status || "approved";
       });
       setPlayerStats(stats);
       const playerIds = allPlayers.map(p => p.id);
@@ -3058,10 +3405,6 @@ function AdminTab({ allPlayers, onRefresh, showToast }) {
           })}
         </>
       )}
-
-      <div style={{marginTop:20,textAlign:"center"}}>
-        <button className="link-btn" onClick={()=>sb.auth.signOut()}>Sign out</button>
-      </div>
 
     </div>
   );
