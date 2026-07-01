@@ -2492,9 +2492,15 @@ function ProgressTab({ player, checks, isAdmin, allPlayers = [] }) {
       });
       // Squad Sessions are bonus approvals, not training sessions for the Sessions Logged / Minutes Active boxes.
       // They still count for points.
-      if (isApproved(checks[squadKey(w.week)])) { pts += PTS.squad; }
-      if (isApproved(checks[fridayHurlingKey(w.week)])) { pts += PTS.fridayHurling; }
-    });
+if (isApproved(checks[squadKey(w.week)])) {
+  sessions++;
+  pts += PTS.squad;
+}
+
+if (isApproved(checks[fridayHurlingKey(w.week)])) {
+  sessions++;
+  pts += PTS.fridayHurling;
+}    });
     return { sessions, minutes, pts, totalKm };
   }, [checks]);
 
@@ -2532,8 +2538,7 @@ function ProgressTab({ player, checks, isAdmin, allPlayers = [] }) {
         ? new Date(c.completed_at).toLocaleDateString("en-IE", { day:"numeric", month:"short", year:"numeric" })
         : null;
       return { label, type, week, date, key: k };
-    }).filter(a => a.label && a.type !== "squad");
-  }, [completions]);
+.filter(a => a.label)  }, [completions]);
 
   const typeStyle = {
     run:   { color:"var(--g)",  bg:"var(--g3)",  icon:"🏃" },
@@ -2569,10 +2574,9 @@ function ProgressTab({ player, checks, isAdmin, allPlayers = [] }) {
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16,width:"100%"}}>
         {[
-          { label:"Sessions\nLogged", value: stats.sessions, suffix:"",     color:"var(--g)", icon:"✅" },
-          { label:"Minutes\nActive",  value: stats.minutes,  suffix:" min", color:"#2e7d32",  icon:"⏱" },
-          { label:"Total\nPoints",    value: stats.pts,      suffix:" pts", color:"#b8860b",  icon:"⭐" },
-        ].map(s => (
+{ label:"Sessions Logged", value: stats.sessions, suffix:"",     color:"var(--g)", icon:"✅" },
+{ label:"Minutes Active",  value: stats.minutes,  suffix:" min", color:"#2e7d32",  icon:"⏱" },
+{ label:"Total Points",    value: stats.pts,      suffix:" pts", color:"#b8860b",  icon:"⭐" },        ].map(s => (
           <div key={s.label} style={{background:"white",borderRadius:12,padding:"12px 8px",textAlign:"center",border:"1px solid #f0dede"}}>
             <div style={{fontSize:20}}>{s.icon}</div>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,color:s.color,lineHeight:1,marginTop:4}}>
