@@ -2403,9 +2403,8 @@ function AdminProgressSnapshot({ allPlayers }) {
           w.speed.forEach(s => { if (isApproved(c[speedKey(w.week,s.id)])) { sessions++; minutes += 10; } });
           // Squad Sessions are bonus approvals, not training sessions for the Sessions Logged / Minutes Active boxes.
           // They still count for points via totalPts(c).
-          if (isApproved(c[squadKey(w.week)])) { /* bonus only */ }
-          if (isApproved(c[fridayHurlingKey(w.week)])) { /* bonus only */ }
-        });
+if (isApproved(c[squadKey(w.week)])) { sessions++; }
+if (isApproved(c[fridayHurlingKey(w.week)])) { sessions++; }        });
         return { ...p, checks:c, sessions, minutes, pts:totalPts(c), totalKm };
       }).sort((a,b)=>b.pts-a.pts));
 
@@ -2438,11 +2437,9 @@ function AdminProgressSnapshot({ allPlayers }) {
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
               {[
-                { label:"Sessions\\nLogged", value:p.sessions, suffix:"", icon:"✅", color:"var(--g)" },
-                { label:"Minutes\\nActive", value:p.minutes, suffix:" min", icon:"⏱", color:"#2e7d32" },
-                { label:"Total\\nPoints", value:p.pts, suffix:" pts", icon:"⭐", color:"#b8860b" },
-              ].map(s => (
-                <div key={s.label} style={{background:"#fdfafa",borderRadius:12,padding:"10px 6px",textAlign:"center",border:"1px solid #f0dede"}}>
+{ label:"Sessions Logged", value: stats.sessions, suffix:"",     color:"var(--g)", icon:"✅" },
+{ label:"Minutes Active",  value: stats.minutes,  suffix:" min", color:"#2e7d32",  icon:"⏱" },
+{ label:"Total Points",    value: stats.pts,      suffix:" pts", color:"#b8860b",  icon:"⭐" },                <div key={s.label} style={{background:"#fdfafa",borderRadius:12,padding:"10px 6px",textAlign:"center",border:"1px solid #f0dede"}}>
                   <div style={{fontSize:18}}>{s.icon}</div>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,color:s.color,lineHeight:1,marginTop:3}}>{s.value}{s.suffix}</div>
                   <div style={{fontSize:9,color:"var(--muted)",whiteSpace:"pre-line",lineHeight:1.2,marginTop:3}}>{s.label}</div>
@@ -2496,14 +2493,10 @@ if (isApproved(checks[squadKey(w.week)])) {
   sessions++;
   pts += PTS.squad;
 }
-
 if (isApproved(checks[fridayHurlingKey(w.week)])) {
   sessions++;
   pts += PTS.fridayHurling;
-}    });
-    return { sessions, minutes, pts, totalKm };
-  }, [checks]);
-
+}
   const weeklyData = useMemo(() => {
     return WEEKS.map(w => {
       let runs = 0, skills = 0, speed = 0, squad = 0;
