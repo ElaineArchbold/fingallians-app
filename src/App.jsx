@@ -1,5 +1,4 @@
-﻿
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL      = "https://keokuecrjhksgtbsxudj.supabase.co";
@@ -480,11 +479,12 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .mark-undone{background:#eee;color:var(--mid)}
 .mark-undone:hover{background:#e0e0e0}
 .squad-card{background:linear-gradient(135deg,#7d1018 0%,var(--g) 100%);border-radius:var(--radius);box-shadow:var(--shadow-lg);margin-bottom:12px;overflow:hidden}
-.squad-hd{display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer;user-select:none}
-.squad-icon{font-size:26px;flex-shrink:0}
-.squad-hd-text .squad-type{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6)}
-.squad-hd-text .squad-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;color:white;letter-spacing:0.02em}
-.squad-pts{font-size:12px;font-weight:900;color:var(--dark);background:var(--gold);padding:3px 10px;border-radius:10px;flex-shrink:0}
+.squad-hd{display:grid;grid-template-columns:34px 1fr 70px 24px;align-items:center;gap:10px;padding:16px 18px;cursor:pointer;user-select:none}
+.squad-icon{font-size:28px;line-height:1;text-align:center;margin-bottom:4px}
+.squad-hd-text{text-align:center;min-width:0}
+.squad-hd-text .squad-type{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.68);line-height:1.25}
+.squad-hd-text .squad-name{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:white;letter-spacing:0.02em;line-height:1.05}
+.squad-pts{font-size:12px;font-weight:900;color:var(--dark);background:var(--gold);padding:4px 8px;border-radius:10px;text-align:center;justify-self:end;white-space:nowrap}
 .squad-body{border-top:1px solid rgba(255,255,255,0.12);padding:14px 18px}
 .squad-desc{font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6;margin-bottom:14px}
 .squad-cta{font-size:12px;color:var(--gold2);font-weight:700;margin-bottom:12px}
@@ -505,7 +505,7 @@ body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--dark);min-he
 .prog-mini{height:4px;border-radius:2px;background:#f0dede;overflow:hidden;margin-top:4px}
 .prog-mini-fill{height:100%;border-radius:2px;background:var(--g)}
 .add-form{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--g);color:white;padding:10px 22px;border-radius:24px;font-weight:700;font-size:14px;box-shadow:0 6px 28px rgba(163,22,33,0.35);z-index:9999;white-space:nowrap;pointer-events:none;animation:tin 0.25s ease}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--g);color:white;padding:10px 18px;border-radius:24px;font-weight:700;font-size:14px;box-shadow:0 6px 28px rgba(163,22,33,0.35);z-index:9999;white-space:normal;pointer-events:none;animation:tin 0.25s ease;max-width:calc(100vw - 32px);width:max-content;text-align:center;line-height:1.35;box-sizing:border-box}
 @keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
 @keyframes confetti-fall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
@@ -1242,7 +1242,7 @@ export default function App() {
         .eq("player_id", player.id)
         .eq("task_key", taskKey);
 
-      const nextStatus = isSquadSession ? "pending" : "approved";
+      const nextStatus = isApprovalBonus ? "pending" : "approved";
       const { error: insertError } = await sb.from("task_completions").insert({
         player_id: player.id,
         task_key: taskKey,
@@ -2136,15 +2136,15 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
                   if(expandedSquad && !done && !pending && !returned) showToast("💪 Don't forget to submit your Squad Session if you completed this!");
                   setExpandedSquad(v=>!v);
                 }}>{done?"✓":pending?"…":returned?"↺":""}</div>
-              <div className="squad-icon">👥</div>
               <div className="squad-hd-text">
-                <div className="squad-type">
-                  Squad Session · +{r.points || PTS.squad} pts {pending ? "· Awaiting approval" : returned ? "· Returned" : ""}
-                </div>
+                <div className="squad-icon">👥</div>
                 <div className="squad-name">{w.squad.label}</div>
+                <div className="squad-type">
+                  +{PTS.squad} pts {pending ? "· Awaiting approval" : returned ? "· Returned" : ""}
+                </div>
               </div>
               <div className="squad-pts">{pending ? "Pending" : returned ? "Returned" : `+${PTS.squad}`}</div>
-              <div style={{fontSize:18,color:"rgba(255,255,255,0.5)",transition:"transform 0.2s",transform:expandedSquad?"rotate(180deg)":"none"}}>⌄</div>
+              <div style={{fontSize:20,color:"rgba(255,255,255,0.65)",transition:"transform 0.2s",transform:expandedSquad?"rotate(180deg)":"none",justifySelf:"end"}}>⌄</div>
             </div>
             {expandedSquad && (
               <div className="squad-body">
@@ -2215,15 +2215,15 @@ function WeekDetail({ w, ps, pct, wPts, wMax, checks, onToggle, player, showToas
                 onClick={e=>{e.stopPropagation(); setExpandedFriday(v=>!v);}}>
                 {done?"✓":pending?"…":returned?"↺":""}
               </div>
-              <div className="squad-icon">🏑</div>
               <div className="squad-hd-text">
-                <div className="squad-type">
-                  Friday Night Hurling · +{PTS.friday} pts {pending ? "· Awaiting approval" : returned ? "· Returned" : ""}
-                </div>
+                <div className="squad-icon">🏑</div>
                 <div className="squad-name">Friday Night Hurling</div>
+                <div className="squad-type">
+                  +{PTS.friday} pts {pending ? "· Awaiting approval" : returned ? "· Returned" : ""}
+                </div>
               </div>
               <div className="squad-pts">{pending ? "Pending" : returned ? "Returned" : `+${PTS.friday}`}</div>
-              <div style={{fontSize:18,color:"rgba(255,255,255,0.5)",transition:"transform 0.2s",transform:expandedFriday?"rotate(180deg)":"none"}}>⌄</div>
+              <div style={{fontSize:20,color:"rgba(255,255,255,0.65)",transition:"transform 0.2s",transform:expandedFriday?"rotate(180deg)":"none",justifySelf:"end"}}>⌄</div>
             </div>
             {expandedFriday && (
               <div className="squad-body">
