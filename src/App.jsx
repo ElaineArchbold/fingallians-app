@@ -568,7 +568,7 @@ function TCReacceptModal({ userEmail, onAccepted }) {
         user_email: userEmail,
         player_id: null,
         player_name: null,
-        action: "tc_agreed_at_signup",
+        action: "tc_reaccepted",
         detail: `User agreed to Terms & Conditions (${CURRENT_TERMS_VERSION})`,
         squad: APP_SQUAD,
         old_value: null,
@@ -997,7 +997,7 @@ export default function App() {
           .select("id")
           .eq("user_email", session.user.email)
           .eq("squad", APP_SQUAD)
-          .eq("action", "tc_agreed_at_signup")
+          .in("action", ["tc_agreed_at_signup", "tc_reaccepted"])
           .or(`new_value.eq.${CURRENT_TERMS_VERSION},detail.ilike.%${CURRENT_TERMS_VERSION}%`)
           .limit(1);
 
@@ -1428,17 +1428,18 @@ function AuthScreen({ showToast }) {
       });
       if (error) { setErr(error.message); setBusy(false); return; }
       setSignedUpEmail(email);
-      // Log T&Cs agreement
+      // Record signup T&Cs against the current required version so new users are not asked again after verification.
+      try { localStorage.setItem(`tcVersion:${APP_SQUAD}`, CURRENT_TERMS_VERSION); } catch (_) {}
       try {
         await sb.from("audit_log").insert({
           user_email: email,
           player_id: null,
           player_name: null,
           action: "tc_agreed_at_signup",
-          detail: "User agreed to Terms & Conditions at account creation",
+          detail: `User agreed to Terms & Conditions (${CURRENT_TERMS_VERSION}) at account creation`,
           squad: APP_SQUAD,
           old_value: null,
-          new_value: new Date().toISOString(),
+          new_value: CURRENT_TERMS_VERSION,
         });
       } catch(_) {}
       setMode("verify");
@@ -3294,10 +3295,12 @@ function ConsentLog() {
           hour:"2-digit", minute:"2-digit"
         }) : "";
 
-        const acceptedAt = r.new_value ? new Date(r.new_value).toLocaleString("en-IE", {
-          day:"numeric", month:"short", year:"numeric",
-          hour:"2-digit", minute:"2-digit"
-        }) : createdAt;
+        const acceptedAt = r.new_value && !Number.isNaN(Date.parse(r.new_value))
+          ? new Date(r.new_value).toLocaleString("en-IE", {
+              day:"numeric", month:"short", year:"numeric",
+              hour:"2-digit", minute:"2-digit"
+            })
+          : createdAt;
 
         return (
           <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",
