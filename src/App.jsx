@@ -2538,8 +2538,8 @@ if (isApproved(checks[fridayHurlingKey(w.week)])) {
         ? new Date(c.completed_at).toLocaleDateString("en-IE", { day:"numeric", month:"short", year:"numeric" })
         : null;
       return { label, type, week, date, key: k };
-.filter(a => a.label)  }, [completions]);
-
+    }).filter(a => a.label);
+  }, [completions]);
   const typeStyle = {
     run:   { color:"var(--g)",  bg:"var(--g3)",  icon:"🏃" },
     skill: { color:"#2e7d32",   bg:"#e8f5e9",    icon:"🏑" },
